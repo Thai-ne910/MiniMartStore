@@ -1,0 +1,91 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminCustomerFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<input asp-for="Id" type="hidden" />
+
+<div class="admin-customer-form-grid">
+    <label>Email</label>
+    <div>
+        <input asp-for="Email" class="admin-customer-form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+
+    <label>Họ tên</label>
+    <div>
+        <input asp-for="FullName" class="admin-customer-form-control" />
+        <span asp-validation-for="FullName" class="text-danger"></span>
+    </div>
+
+    <label>Số điện thoại</label>
+    <div>
+        <input asp-for="PhoneNumber" class="admin-customer-form-control" />
+        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+    </div>
+
+    <label>Địa chỉ</label>
+    <div>
+        <textarea asp-for="Address" class="admin-customer-form-control"></textarea>
+        <span asp-validation-for="Address" class="text-danger"></span>
+    </div>
+
+    <label>Mật khẩu</label>
+    <div>
+        <input asp-for="Password" class="admin-customer-form-control" autocomplete="new-password" />
+        <span asp-validation-for="Password" class="text-danger"></span>
+        @if (!string.IsNullOrWhiteSpace(Model.Id))
+        {
+            <small class="admin-customer-sub">Để trống nếu không muốn đổi mật khẩu.</small>
+        }
+    </div>
+
+    <label>Nhập lại mật khẩu</label>
+    <div>
+        <input asp-for="ConfirmPassword" class="admin-customer-form-control" autocomplete="new-password" />
+        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+    </div>
+
+    <label>Vai trò</label>
+    <div>
+        <select name="SelectedRoles"
+                class="admin-customer-form-control admin-customer-select">
+            <option value="">Chọn vai trò</option>
+
+            @foreach (var role in Model.AvailableRoles)
+            {
+                var value = role.Value ?? "";
+                var selected = Model.SelectedRoles.Contains(value);
+
+                <option value="@value" selected="@selected">
+                    @role.Text
+                </option>
+            }
+        </select>
+    </div>
+
+    <label>Phương thức giao hàng ưu tiên</label>
+    <div>
+        <select asp-for="PreferredShippingMethodId"
+                asp-items="Model.ShippingMethods"
+                class="admin-customer-form-control admin-customer-select">
+            <option value="">Chưa chọn</option>
+        </select>
+    </div>
+
+    <label>Phương thức thanh toán ưu tiên</label>
+    <div>
+        <select asp-for="PreferredPaymentMethod"
+                asp-items="Model.PaymentMethods"
+                class="admin-customer-form-control admin-customer-select">
+            <option value="">Chưa chọn</option>
+        </select>
+    </div>
+
+    <label>Trạng thái</label>
+    <div>
+        <label class="admin-customer-switch">
+            <input asp-for="IsActive" />
+            <span></span>
+        </label>
+    </div>
+</div>
