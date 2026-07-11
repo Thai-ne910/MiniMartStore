@@ -1,0 +1,137 @@
+﻿@model MiniSmartstoreMvc.ViewModels.CustomerInfoViewModel
+
+@{
+    ViewData["Title"] = "Thông tin tài khoản";
+}
+
+<div class="container ss-account-page">
+    <div class="ss-account-layout">
+        <partial name="_CustomerSidebar" />
+
+        <main class="ss-account-content">
+            <h1>Thông tin tài khoản</h1>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["Success"]
+                </div>
+            }
+
+            <form asp-controller="Customer"
+                  asp-action="Info"
+                  method="post"
+                  class="ss-account-form">
+
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="ss-section-heading">
+                    <span>THÔNG TIN CÁ NHÂN</span>
+                </div>
+
+                <div class="ss-form-row">
+                    <label>Họ tên *</label>
+                    <div>
+                        <input asp-for="FullName"
+                               class="form-control"
+                               placeholder="Nhập họ tên" />
+
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ss-form-row">
+                    <label>Email *</label>
+                    <div>
+                        <input asp-for="Email"
+                               class="form-control"
+                               readonly />
+
+                        <small class="text-muted">Email đăng nhập không thể sửa tại đây.</small>
+                    </div>
+                </div>
+
+                <div class="ss-form-row">
+                    <label>Số điện thoại</label>
+                    <div>
+                        <input asp-for="PhoneNumber"
+                               class="form-control"
+                               placeholder="Nhập số điện thoại" />
+
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ss-section-heading">
+                    <span>ĐỊA CHỈ</span>
+                </div>
+
+                <div class="ss-form-row ss-form-row-top">
+                    <label>Địa chỉ nhận hàng</label>
+                    <div>
+                        <textarea asp-for="Address"
+                                  class="form-control"
+                                  rows="4"
+                                  placeholder="Nhập địa chỉ nhận hàng"></textarea>
+                    </div>
+                </div>
+
+                <div class="ss-section-heading">
+                    <span>TÙY CHỌN</span>
+                </div>
+
+                <div class="ss-form-row">
+                    <label></label>
+                    <div>
+                        <label class="ss-checkbox-line">
+                            <input asp-for="SubscribeNewsletter" />
+                            <span>Tôi muốn nhận thông tin khuyến mãi qua email.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="ss-form-row">
+                    <label>Phương thức giao hàng ưu tiên</label>
+                    <div>
+                        <select asp-for="PreferredShippingMethodId" class="form-select">
+                            <option value="">Chưa chọn</option>
+                            <option>Giao hàng tiêu chuẩn</option>
+                            <option>Giao hàng nhanh</option>
+                            <option>Miễn phí giao hàng</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="ss-form-row">
+                    <label>Phương thức thanh toán ưu tiên</label>
+                    <div>
+                        <select asp-for="PreferredPaymentMethod" class="form-select">
+                            <option value="">Chưa chọn</option>
+                            <option>Thanh toán khi nhận hàng</option>
+                            <option>Chuyển khoản ngân hàng</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="ss-form-row">
+                    <label></label>
+                    <div>
+                        <p class="ss-form-note">
+                            * Các trường có dấu sao là bắt buộc.
+                        </p>
+
+                        <button type="submit" class="ss-save-btn">
+                            ✓ Lưu thông tin
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
