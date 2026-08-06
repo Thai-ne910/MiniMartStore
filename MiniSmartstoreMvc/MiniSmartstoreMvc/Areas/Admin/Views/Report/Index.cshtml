@@ -1,0 +1,540 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminReportOverviewViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Báo cáo tổng quan";
+
+    var max7 = Model.RevenueLast7Days.Any() ? Model.RevenueLast7Days.Max(x => x.Amount) : 0;
+    var max30 = Model.RevenueLast30Days.Any() ? Model.RevenueLast30Days.Max(x => x.Amount) : 0;
+    var revenue7LabelsJson = JsonSerializer.Serialize(Model.RevenueLast7Days.Select(x => x.Label));
+    var revenue7AmountsJson = JsonSerializer.Serialize(Model.RevenueLast7Days.Select(x => x.Amount));
+
+    var revenue30LabelsJson = JsonSerializer.Serialize(Model.RevenueLast30Days.Select(x => x.Label));
+    var revenue30AmountsJson = JsonSerializer.Serialize(Model.RevenueLast30Days.Select(x => x.Amount));
+}
+
+<div class="admin-report-page">
+    <div class="admin-report-shell">
+        <div class="admin-report-header">
+            <div class="admin-report-title">
+                <h1>Báo cáo tổng quan</h1>
+                <p>Xem nhanh doanh thu, đơn hàng, sản phẩm và khách hàng trong hệ thống.</p>
+            </div>
+
+            <div class="admin-report-tabs">
+                <a asp-area="Admin" asp-controller="Report" asp-action="Index" class="active">Tổng quan</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Sales">Doanh thu</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Products">Sản phẩm</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Customers">Khách hàng</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory">Tồn kho</a>
+            </div>
+        </div>
+
+        <div class="admin-report-body">
+            <div class="admin-report-stats">
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tổng doanh thu</div>
+                    <div class="admin-report-stat-value">@Model.TotalRevenue.ToString("N0") đ</div>
+                    <div class="admin-report-stat-note">Từ đơn hoàn thành hoặc đã thanh toán</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tổng đơn hàng</div>
+                    <div class="admin-report-stat-value">@Model.TotalOrders</div>
+                    <div class="admin-report-stat-note">Tất cả đơn trong hệ thống</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Đơn hoàn thành</div>
+                    <div class="admin-report-stat-value">@Model.CompletedOrders</div>
+                    <div class="admin-report-stat-note">Đơn đã xử lý xong</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Đơn chờ xử lý</div>
+                    <div class="admin-report-stat-value">@Model.PendingOrders</div>
+                    <div class="admin-report-stat-note">Cần admin kiểm tra</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Sản phẩm đã bán</div>
+                    <div class="admin-report-stat-value">@Model.SoldQuantity</div>
+                    <div class="admin-report-stat-note">Tính theo số lượng</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Khách hàng mới</div>
+                    <div class="admin-report-stat-value">@Model.NewCustomers</div>
+                    <div class="admin-report-stat-note">Trong 30 ngày gần nhất</div>
+                </div>
+            </div>
+
+            <div class="admin-report-grid-2">
+                <div class="admin-report-card">
+                    <div class="admin-report-card-header">
+                        <div>
+                            <h2>Doanh thu 7 ngày gần nhất</h2>
+                            <p>Theo các đơn đã hoàn thành hoặc đã thanh toán.</p>
+                        </div> 
+                    </div>
+                    <div class="admin-report-card-body">
+                        <div class="admin-report-canvas-wrap">
+                            <canvas id="revenue7Chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-report-card">
+                    <div class="admin-report-card-header">
+                        <div>
+                            <h2>Doanh thu 30 ngày gần nhất</h2>
+                            <p>Theo từng ngày trong tháng gần nhất.</p>
+                        </div>
+                    </div>
+
+                    <div class="admin-report-card-body">
+                        <div class="admin-report-canvas-wrap line">
+                            <canvas id="revenue30Chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-report-card">
+                    <div class="admin-report-card-header">
+                        <div>
+                            <h2>Sản phẩm bán chạy</h2>
+                            <p>Dựa trên số lượng đã bán.</p>
+                        </div>
+
+                        <a asp-area="Admin" asp-controller="Report" asp-action="Products" class="admin-report-secondary-btn">
+                            Xem chi tiết
+                        </a>
+                    </div>
+
+                    <div class="admin-report-table-wrap">
+                        <table class="admin-report-table">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Đã bán</th>
+                                    <th>Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.TopProducts.Any())
+                                {
+                                    foreach (var item in Model.TopProducts)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.ProductId" class="admin-report-link">
+                                                    @item.ProductName
+                                                </a>
+                                                <div class="admin-report-muted">@item.CategoryName</div>
+                                            </td>
+                                            <td><span class="admin-report-badge">@item.SoldQuantity</span></td>
+                                            <td class="admin-report-money">@item.Revenue.ToString("N0") đ</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="3" class="admin-report-empty">Chưa có dữ liệu sản phẩm bán chạy.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="admin-report-card">
+                    <div class="admin-report-card-header">
+                        <div>
+                            <h2>Khách hàng nổi bật</h2>
+                            <p>Dựa trên tổng tiền đã mua.</p>
+                        </div>
+
+                        <a asp-area="Admin" asp-controller="Report" asp-action="Customers" class="admin-report-secondary-btn">
+                            Xem chi tiết
+                        </a>
+                    </div>
+
+                    <div class="admin-report-table-wrap">
+                        <table class="admin-report-table">
+                            <thead>
+                                <tr>
+                                    <th>Khách hàng</th>
+                                    <th>Số đơn</th>
+                                    <th>Tổng tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.TopCustomers.Any())
+                                {
+                                    foreach (var item in Model.TopCustomers)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-area="Admin" asp-controller="Customer" asp-action="Edit" asp-route-id="@item.UserId" class="admin-report-link">
+                                                    @item.CustomerName
+                                                </a>
+                                                <div class="admin-report-muted">@item.Email</div>
+                                            </td>
+                                            <td><span class="admin-report-badge">@item.OrderCount</span></td>
+                                            <td class="admin-report-money">@item.TotalSpent.ToString("N0") đ</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="3" class="admin-report-empty">Chưa có dữ liệu khách hàng.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="admin-report-card">
+                    <div class="admin-report-card-header">
+                        <div>
+                            <h2>Cảnh báo tồn kho</h2>
+                            <p>Sản phẩm đang ẩn, hết hàng hoặc sắp hết hàng.</p>
+                        </div>
+
+                        <a asp-area="Admin" asp-controller="Report" asp-action="Inventory" class="admin-report-secondary-btn">
+                            Xem chi tiết
+                        </a>
+                    </div>
+
+                    <div class="admin-report-table-wrap">
+                        <table class="admin-report-table">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Tồn kho</th>
+                                    <th>Cảnh báo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.InventoryWarnings.Any())
+                                {
+                                    foreach (var item in Model.InventoryWarnings)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.ProductId" class="admin-report-link">
+                                                    @item.ProductName
+                                                </a>
+                                                <div class="admin-report-muted">@item.CategoryName</div>
+                                            </td>
+                                            <td><span class="admin-report-badge">@item.StockQuantity</span></td>
+                                            <td>
+                                                <span class="admin-report-pill @item.WarningType">
+                                                    @item.WarningText
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="3" class="admin-report-empty">Không có cảnh báo tồn kho.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="admin-report-card">
+                    <div class="admin-report-card-header">
+                        <div>
+                            <h2>Gợi ý xử lý</h2>
+                            <p>Các việc nên kiểm tra trong khu vực quản trị.</p>
+                        </div>
+                    </div>
+
+                    <div class="admin-report-card-body">
+                        <p class="admin-report-muted">
+                            Kiểm tra các đơn chờ xử lý, cập nhật trạng thái thanh toán, xem sản phẩm sắp hết hàng và theo dõi khách hàng có tổng mua cao.
+                        </p>
+
+                        <div class="admin-report-tabs">
+                            <a asp-area="Admin" asp-controller="Order" asp-action="List">Quản lý đơn hàng</a>
+                            <a asp-area="Admin" asp-controller="Product" asp-action="Index">Quản lý sản phẩm</a>
+                            <a asp-area="Admin" asp-controller="Customer" asp-action="List">Quản lý khách hàng</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const labels7 = @Html.Raw(revenue7LabelsJson);
+            const values7 = @Html.Raw(revenue7AmountsJson);
+
+            const labels30 = @Html.Raw(revenue30LabelsJson);
+            const values30 = @Html.Raw(revenue30AmountsJson);
+
+            drawBarChart("revenue7Chart", labels7, values7);
+            drawLineChart("revenue30Chart", labels30, values30);
+
+            window.addEventListener("resize", function() {
+                drawBarChart("revenue7Chart", labels7, values7);
+                drawLineChart("revenue30Chart", labels30, values30);
+            });
+        });
+
+        function prepareCanvas(canvas) {
+            const parent = canvas.parentElement;
+            const ratio = window.devicePixelRatio || 1;
+
+            const width = parent.clientWidth;
+            const height = parent.clientHeight;
+
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+
+            canvas.style.width = width + "px";
+            canvas.style.height = height + "px";
+
+            const ctx = canvas.getContext("2d");
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+            return {
+                ctx,
+                width,
+                height
+            };
+        }
+
+        function formatMoney(value) {
+            return Number(value || 0).toLocaleString("vi-VN") + " đ";
+        }
+
+        function drawEmptyChart(ctx, width, height, message) {
+            ctx.clearRect(0, 0, width, height);
+
+            ctx.fillStyle = "#8a9ab2";
+            ctx.font = "700 14px 'Be Vietnam Pro', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(message, width / 2, height / 2);
+        }
+
+        function drawGrid(ctx, width, height, padding) {
+            ctx.strokeStyle = "#edf3f9";
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i < 4; i++) {
+                const y = padding.top + i * ((height - padding.top - padding.bottom) / 3);
+
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = "#d7e3f0";
+            ctx.lineWidth = 1.5;
+
+            ctx.beginPath();
+            ctx.moveTo(padding.left, height - padding.bottom);
+            ctx.lineTo(width - padding.right, height - padding.bottom);
+            ctx.stroke();
+        }
+
+        function drawBarChart(canvasId, labels, values) {
+            const canvas = document.getElementById(canvasId);
+
+            if (!canvas) {
+                return;
+            }
+
+            const chart = prepareCanvas(canvas);
+            const ctx = chart.ctx;
+            const width = chart.width;
+            const height = chart.height;
+
+            const padding = {
+                top: 24,
+                right: 24,
+                bottom: 42,
+                left: 34
+            };
+
+            const maxValue = Math.max(...values.map(x => Number(x || 0)), 0);
+
+            if (maxValue <= 0) {
+                drawEmptyChart(ctx, width, height, "Chưa có doanh thu trong 7 ngày gần nhất");
+                return;
+            }
+
+            ctx.clearRect(0, 0, width, height);
+            drawGrid(ctx, width, height, padding);
+
+            const chartHeight = height - padding.top - padding.bottom;
+            const chartWidth = width - padding.left - padding.right;
+            const gap = 18;
+            const barWidth = Math.max(18, (chartWidth - gap * (values.length - 1)) / values.length);
+
+            values.forEach(function(value, index) {
+                value = Number(value || 0);
+
+                const x = padding.left + index * (barWidth + gap);
+                const barHeight = Math.max(8, (value / maxValue) * chartHeight);
+                const y = height - padding.bottom - barHeight;
+
+                const gradient = ctx.createLinearGradient(0, y, 0, height - padding.bottom);
+                gradient.addColorStop(0, "#2f86d8");
+                gradient.addColorStop(1, "#1f63ad");
+
+                ctx.fillStyle = gradient;
+                roundRect(ctx, x, y, barWidth, barHeight, 8);
+                ctx.fill();
+
+                ctx.fillStyle = "#8798af";
+                ctx.font = "700 11px 'Be Vietnam Pro', sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(labels[index], x + barWidth / 2, height - 14);
+            });
+        }
+
+        function drawLineChart(canvasId, labels, values) {
+            const canvas = document.getElementById(canvasId);
+
+            if (!canvas) {
+                return;
+            }
+
+            const chart = prepareCanvas(canvas);
+            const ctx = chart.ctx;
+            const width = chart.width;
+            const height = chart.height;
+
+            const padding = {
+                top: 28,
+                right: 28,
+                bottom: 42,
+                left: 46
+            };
+
+            const numericValues = values.map(x => Number(x || 0));
+            const maxValue = Math.max(...numericValues, 0);
+
+            if (maxValue <= 0) {
+                drawEmptyChart(ctx, width, height, "Chưa có doanh thu trong 30 ngày gần nhất");
+                return;
+            }
+
+            ctx.clearRect(0, 0, width, height);
+            drawGrid(ctx, width, height, padding);
+
+            const chartHeight = height - padding.top - padding.bottom;
+            const chartWidth = width - padding.left - padding.right;
+
+            const points = numericValues.map(function(value, index) {
+                const x = labels.length <= 1
+                    ? padding.left
+                    : padding.left + index * (chartWidth / (labels.length - 1));
+
+                const y = height - padding.bottom - ((value / maxValue) * chartHeight);
+
+                return {
+                    x,
+                    y,
+                    value,
+                    label: labels[index]
+                };
+            });
+
+            const areaGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+            areaGradient.addColorStop(0, "rgba(47, 134, 216, 0.22)");
+            areaGradient.addColorStop(1, "rgba(47, 134, 216, 0)");
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, height - padding.bottom);
+
+            points.forEach(function(point, index) {
+                if (index === 0) {
+                    ctx.lineTo(point.x, point.y);
+                } else {
+                    const previous = points[index - 1];
+                    const middleX = (previous.x + point.x) / 2;
+
+                    ctx.bezierCurveTo(middleX, previous.y, middleX, point.y, point.x, point.y);
+                }
+            });
+
+            ctx.lineTo(points[points.length - 1].x, height - padding.bottom);
+            ctx.closePath();
+            ctx.fillStyle = areaGradient;
+            ctx.fill();
+
+            ctx.beginPath();
+
+            points.forEach(function(point, index) {
+                if (index === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    const previous = points[index - 1];
+                    const middleX = (previous.x + point.x) / 2;
+
+                    ctx.bezierCurveTo(middleX, previous.y, middleX, point.y, point.x, point.y);
+                }
+            });
+
+            ctx.strokeStyle = "#1f63ad";
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.stroke();
+
+            points.forEach(function(point, index) {
+                if (point.value <= 0) {
+                    return;
+                }
+
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = "#ffffff";
+                ctx.fill();
+                ctx.strokeStyle = "#1f63ad";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = "#8798af";
+            ctx.font = "700 11px 'Be Vietnam Pro', sans-serif";
+            ctx.textAlign = "center";
+
+            points.forEach(function(point, index) {
+                if (index === 0 || index === points.length - 1 || index % 5 === 0) {
+                    ctx.fillText(point.label, point.x, height - 14);
+                }
+            });
+
+            ctx.fillStyle = "#0f2748";
+            ctx.font = "800 12px 'Be Vietnam Pro', sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(formatMoney(maxValue), padding.left, 16);
+        }
+
+        function roundRect(ctx, x, y, width, height, radius) {
+            const r = Math.min(radius, width / 2, height / 2);
+
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + width, y, x + width, y + height, r);
+            ctx.arcTo(x + width, y + height, x, y + height, r);
+            ctx.arcTo(x, y + height, x, y, r);
+            ctx.arcTo(x, y, x + width, y, r);
+            ctx.closePath();
+        }
+    </script>
+}

@@ -1,0 +1,122 @@
+﻿@model List<MiniSmartstoreMvc.Models.Product>
+
+@{
+    ViewData["Title"] = "Danh sách yêu thích";
+}
+
+<div class="container wishlist-page">
+    <div class="wishlist-header">
+        <div>
+            <h1>Danh sách yêu thích</h1>
+            <p>Các sản phẩm bạn đã lưu để xem lại hoặc mua sau.</p>
+        </div>
+
+        @if (Model.Any())
+        {
+            <form asp-controller="Wishlist"
+                  asp-action="Clear"
+                  method="post"
+                  onsubmit="return confirm('Bạn có chắc muốn xóa toàn bộ danh sách yêu thích?')">
+                @Html.AntiForgeryToken()
+
+                <button type="submit" class="wishlist-clear-btn">
+                    🗑 Xóa tất cả
+                </button>
+            </form>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="wishlist-empty-box">
+            <div class="wishlist-empty-icon">♡</div>
+
+            <h3>Danh sách yêu thích đang trống</h3>
+            <p>Bạn chưa thêm sản phẩm nào vào danh sách yêu thích.</p>
+
+            <a asp-controller="Product" asp-action="Index">
+                Xem sản phẩm
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="wishlist-list">
+            @foreach (var item in Model)
+            {
+                <div class="wishlist-item">
+                    <a asp-controller="Product"
+                       asp-action="Details"
+                       asp-route-id="@item.Id"
+                       class="wishlist-item-image">
+                        <img src="@item.ImageUrl"
+                             alt="@item.Name"
+                             onerror="this.src='/images/products/no-image.jpg'" />
+                    </a>
+
+                    <div class="wishlist-item-info">
+                        <a asp-controller="Product"
+                           asp-action="Details"
+                           asp-route-id="@item.Id"
+                           class="wishlist-item-name">
+                            @item.Name
+                        </a>
+
+                        <div class="wishlist-item-category">
+                            @(item.Category?.Name ?? "Chưa có danh mục")
+                        </div>
+
+                        <div class="wishlist-item-desc">
+                            @item.Description
+                        </div>
+
+                        <div class="wishlist-item-stock">
+                            @if (item.StockQuantity > 0)
+                            {
+                                <span class="in-stock">Còn hàng - @item.StockQuantity sản phẩm</span>
+                            }
+                            else
+                            {
+                                <span class="out-stock">Hết hàng</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="wishlist-item-side">
+                        <div class="wishlist-item-price">
+                            @item.Price.ToString("N0") đ
+                        </div>
+
+                        @if (item.OldPrice != null && item.OldPrice > item.Price)
+                        {
+                            <div class="wishlist-item-old-price">
+                                @item.OldPrice.Value.ToString("N0") đ
+                            </div>
+                        }
+
+                        <div class="wishlist-item-actions">
+                            <button type="button"
+                                    class="wishlist-add-cart js-drawer-add-cart"
+                                    data-product-id="@item.Id">
+                                🛒 Thêm vào giỏ
+                            </button>
+
+                            <form asp-controller="Wishlist"
+                                  asp-action="Remove"
+                                  method="post"
+                                  onsubmit="return confirm('Xóa sản phẩm này khỏi danh sách yêu thích?')">
+                                @Html.AntiForgeryToken()
+
+                                <input type="hidden" name="id" value="@item.Id" />
+
+                                <button type="submit" class="wishlist-remove-btn">
+                                    🗑 Xóa
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

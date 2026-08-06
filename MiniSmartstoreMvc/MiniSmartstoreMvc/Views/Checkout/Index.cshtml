@@ -1,0 +1,234 @@
+﻿@using MiniSmartstoreMvc.Models
+@model MiniSmartstoreMvc.ViewModels.CheckoutViewModel
+
+@{
+    ViewData["Title"] = "Thanh toán";
+}
+
+<div class="container mt-4 checkout-page">
+    <div class="page-heading mb-4">
+        <h1>Thanh toán</h1>
+        <p>Hoàn tất thông tin giao hàng và phương thức thanh toán</p>
+    </div>
+
+    @if (ViewBag.CouponSuccess != null)
+    {
+        <div class="alert alert-success">@ViewBag.CouponSuccess</div>
+    }
+
+    @if (ViewBag.CouponError != null)
+    {
+        <div class="alert alert-danger">@ViewBag.CouponError</div>
+    }
+
+    <form asp-controller="Checkout" asp-action="PlaceOrder" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="checkout-card mb-4">
+                    <h4>Thông tin giao hàng</h4>
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="CustomerName" class="form-label">Họ tên người nhận</label>
+                        <input asp-for="CustomerName" class="form-control" />
+                        <span asp-validation-for="CustomerName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="PhoneNumber" class="form-label">Số điện thoại</label>
+                        <input asp-for="PhoneNumber" class="form-control" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ShippingAddress" class="form-label">Địa chỉ giao hàng</label>
+                        <input asp-for="ShippingAddress" class="form-control" />
+                        <span asp-validation-for="ShippingAddress" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="OrderNote" class="form-label">Ghi chú đơn hàng</label>
+                        <textarea asp-for="OrderNote"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..."></textarea>
+                        <span asp-validation-for="OrderNote" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="checkout-card mb-4">
+                    <h4>Phương thức giao hàng</h4>
+
+                    <span asp-validation-for="ShippingMethodId" class="text-danger"></span>
+
+                    <div class="shipping-method-grid">
+                        @foreach (var item in Model.ShippingMethods)
+                        {
+                            <label class="shipping-option-card">
+                                <input type="radio"
+                                       name="ShippingMethodId"
+                                       value="@item.Id"
+                                       data-fee="@item.Fee"
+                                       checked="@(Model.ShippingMethodId == item.Id)" />
+
+                                <strong>@item.Name</strong>
+
+                                <p>@item.Description</p>
+
+                                <span>@item.Fee.ToString("N0") đ</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <div class="checkout-card mb-4">
+                    <h4>Mã giảm giá</h4>
+
+                    <div class="coupon-box">
+                        <div>
+                            <input asp-for="CouponCode"
+                                   class="form-control"
+                                   placeholder="Nhập mã: SALE50K hoặc VIP10" />
+                            <span asp-validation-for="CouponCode" class="text-danger"></span>
+                        </div>
+
+                        <button type="button" id="applyCouponBtn" class="btn btn-outline-primary">
+                            Áp dụng mã
+                        </button>
+                    </div>
+                </div>
+
+                <div class="checkout-card">
+                    <h4>Phương thức thanh toán</h4>
+
+                    <label class="payment-option">
+                        <input asp-for="PaymentMethod" type="radio" value="@PaymentMethod.CashOnDelivery" />
+                        <div>
+                            <strong>Thanh toán khi nhận hàng</strong>
+                            <p>Khách hàng thanh toán trực tiếp cho shipper khi nhận hàng.</p>
+                        </div>
+                    </label>
+
+                    <label class="payment-option">
+                        <input asp-for="PaymentMethod" type="radio" value="@PaymentMethod.BankTransfer" />
+                        <div>
+                            <strong>Chuyển khoản ngân hàng</strong>
+                            <p>Admin xác nhận thanh toán sau khi nhận chuyển khoản.</p>
+                        </div>
+                    </label>
+
+                    <label class="payment-option">
+                        <input asp-for="PaymentMethod" type="radio" value="@PaymentMethod.OnlinePaymentComingSoon" />
+                        <div>
+                            <strong>Thanh toán online</strong>
+                            <p>Tính năng VNPay / MoMo / PayPal sẽ nâng cấp sau.</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="order-summary">
+                    <h4>Đơn hàng của bạn</h4>
+
+                    @foreach (var item in Model.CartItems)
+                    {
+                        <div class="checkout-item">
+                            <div>
+                                <strong>@item.Product?.Name</strong>
+                                <p>Số lượng: @item.Quantity</p>
+                            </div>
+
+                            <span>@item.TotalPrice.ToString("N0") đ</span>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <div class="summary-row">
+                        <span>Tạm tính</span>
+                        <strong>@Model.SubTotalAmount.ToString("N0") đ</strong>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Phí vận chuyển</span>
+                        <strong id="shippingFeeText">@Model.ShippingFee.ToString("N0") đ</strong>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Giảm giá</span>
+                        <strong class="text-success">-@Model.DiscountAmount.ToString("N0") đ</strong>
+                    </div>
+
+                    <hr />
+
+                    <div class="summary-total">
+                        <span>Tổng thanh toán</span>
+                        <strong id="grandTotalText">@Model.TotalAmount.ToString("N0") đ</strong>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mt-4">
+                        Đặt hàng
+                    </button>
+
+                    <a asp-controller="Cart" asp-action="Index" class="btn btn-outline-secondary w-100 mt-2">
+                        Quay lại giỏ hàng
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        const subTotal = @Model.SubTotalAmount;
+        const discount = @Model.DiscountAmount;
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat("vi-VN").format(value) + " đ";
+        }
+
+        function updateShippingPreview() {
+            const selected = document.querySelector('input[name="ShippingMethodId"]:checked');
+
+            if (!selected) {
+                return;
+            }
+
+            const shippingFee = parseFloat(selected.dataset.fee) || 0;
+            const grandTotal = Math.max(0, subTotal + shippingFee - discount);
+
+            document.getElementById("shippingFeeText").textContent = formatCurrency(shippingFee);
+            document.getElementById("grandTotalText").textContent = formatCurrency(grandTotal);
+        }
+
+        document.querySelectorAll('input[name="ShippingMethodId"]').forEach(function (item) {
+            item.addEventListener("change", updateShippingPreview);
+        });
+
+        document.getElementById("applyCouponBtn").addEventListener("click", function () {
+            const selectedShipping = document.querySelector('input[name="ShippingMethodId"]:checked');
+            const couponCode = document.querySelector('input[name="CouponCode"]').value;
+
+            let url = '@Url.Action("Index", "Checkout")';
+
+            const params = new URLSearchParams();
+
+            if (selectedShipping) {
+                params.append("shippingMethodId", selectedShipping.value);
+            }
+
+            if (couponCode) {
+                params.append("couponCode", couponCode);
+            }
+
+            window.location.href = url + "?" + params.toString();
+        });
+    </script>
+}

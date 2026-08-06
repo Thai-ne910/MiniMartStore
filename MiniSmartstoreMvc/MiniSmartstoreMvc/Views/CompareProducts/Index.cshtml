@@ -1,0 +1,311 @@
+﻿@model List<MiniSmartstoreMvc.Models.Product>
+
+@{
+    ViewData["Title"] = "So sánh sản phẩm";
+}
+
+<form id="comparePageTokenForm" style="display:none">
+    @Html.AntiForgeryToken()
+</form>
+
+<div class="container compare-page">
+    <div class="compare-header">
+        <div>
+            <h1>So sánh sản phẩm</h1>
+            <p>Đối chiếu thông tin, giá bán, tồn kho và lựa chọn sản phẩm phù hợp.</p>
+        </div>
+
+        @if (Model.Any())
+        {
+            <form asp-controller="CompareProducts"
+                  asp-action="Clear"
+                  method="post"
+                  onsubmit="return confirm('Bạn có chắc muốn xóa toàn bộ danh sách so sánh?')">
+                @Html.AntiForgeryToken()
+
+                <button type="submit" class="compare-clear-btn">
+                    🗑 Xóa tất cả
+                </button>
+            </form>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="compare-empty">
+            <div class="compare-empty-icon">⇄</div>
+            <h3>Chưa có sản phẩm nào để so sánh</h3>
+            <p>Hãy thêm sản phẩm vào danh sách so sánh để xem bảng đối chiếu.</p>
+
+            <a asp-controller="Product" asp-action="Index">
+                Xem sản phẩm
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="compare-table-wrap">
+            <table class="compare-table">
+                <tbody>
+                    <tr class="compare-product-row">
+                        <th></th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                <div class="compare-product-card">
+                                    <div class="compare-product-actions-top">
+                                        <button type="button"
+                                                class="compare-icon-btn js-drawer-add-cart"
+                                                data-product-id="@item.Id"
+                                                title="Thêm vào giỏ hàng">
+                                            🛒
+                                        </button>
+
+                                        <button type="button"
+                                                class="compare-icon-btn js-add-wishlist"
+                                                data-product-id="@item.Id"
+                                                title="Thêm vào yêu thích">
+                                            ♡
+                                        </button>
+
+                                        <form asp-controller="CompareProducts"
+                                              asp-action="Remove"
+                                              method="post"
+                                              onsubmit="return confirm('Xóa sản phẩm này khỏi danh sách so sánh?')">
+                                            @Html.AntiForgeryToken()
+
+                                            <input type="hidden" name="id" value="@item.Id" />
+
+                                            <button type="submit"
+                                                    class="compare-icon-btn danger"
+                                                    title="Xóa khỏi so sánh">
+                                                🗑
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <a asp-controller="Product"
+                                       asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="compare-image-link">
+                                        <img src="@item.ImageUrl"
+                                             alt="@item.Name"
+                                             onerror="this.src='/images/products/no-image.jpg'" />
+                                    </a>
+
+                                    @if (item.OldPrice != null && item.OldPrice > item.Price)
+                                    {
+                                        var discount = Math.Round((1 - item.Price / item.OldPrice.Value) * 100);
+
+                                        <span class="compare-discount-badge">
+                                            -@discount%
+                                        </span>
+                                    }
+
+                                    <a asp-controller="Product"
+                                       asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="compare-product-name">
+                                        @item.Name
+                                    </a>
+
+                                    <div class="compare-product-price">
+                                        @item.Price.ToString("N0") đ
+                                    </div>
+
+                                    @if (item.OldPrice != null && item.OldPrice > item.Price)
+                                    {
+                                        <div class="compare-product-old-price">
+                                            Giá cũ: @item.OldPrice.Value.ToString("N0") đ
+                                        </div>
+                                    }
+
+                                    <button type="button"
+                                            class="compare-add-cart-btn js-drawer-add-cart"
+                                            data-product-id="@item.Id">
+                                        🛒 Thêm vào giỏ
+                                    </button>
+                                </div>
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Danh mục</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>@(item.Category?.Name ?? "Chưa có")</td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Mô tả ngắn</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(item.Description))
+                                {
+                                    <span>@item.Description</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Chưa có mô tả</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Giá bán</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                <strong class="compare-price-main">
+                                    @item.Price.ToString("N0") đ
+                                </strong>
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Giá cũ</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                @if (item.OldPrice != null && item.OldPrice > item.Price)
+                                {
+                                    <span class="compare-old-price">
+                                        @item.OldPrice.Value.ToString("N0") đ
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Không có</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Tiết kiệm</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                @if (item.OldPrice != null && item.OldPrice > item.Price)
+                                {
+                                    var save = item.OldPrice.Value - item.Price;
+
+                                    <span class="compare-save-price">
+                                        @save.ToString("N0") đ
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">0 đ</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Màu sắc</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                @if (item.ProductColors != null && item.ProductColors.Any())
+                                {
+                                    <div class="compare-color-list">
+                                        @foreach (var color in item.ProductColors)
+                                        {
+                                            <span title="@color.ColorName"
+                                                  style="background-color:@color.ColorCode">
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Chưa có</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Tồn kho</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                @if (item.StockQuantity > 0)
+                                {
+                                    <span class="compare-stock in-stock">
+                                        Còn hàng - @item.StockQuantity sản phẩm
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="compare-stock out-stock">
+                                        Hết hàng
+                                    </span>
+                                }
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Thời gian giao</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>3 - 5 ngày</td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Hiển thị</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="compare-check">✓</span>
+                                }
+                                else
+                                {
+                                    <span class="compare-x">×</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+
+                    <tr>
+                        <th>Nổi bật</th>
+
+                        @foreach (var item in Model)
+                        {
+                            <td>
+                                @if (item.IsFeatured)
+                                {
+                                    <span class="compare-check">✓</span>
+                                }
+                                else
+                                {
+                                    <span class="compare-x">×</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

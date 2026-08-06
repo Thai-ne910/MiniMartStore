@@ -1,0 +1,47 @@
+﻿@model MiniSmartstoreMvc.Models.Product
+
+@{
+    var imageUrl = string.IsNullOrWhiteSpace(Model.ImageUrl)
+        ? "/images/products/no-image.jpg"
+        : Model.ImageUrl;
+
+    var hasDiscount = Model.OldPrice.HasValue && Model.OldPrice.Value > Model.Price;
+
+    var discountPercent = 0;
+
+    if (hasDiscount)
+    {
+        discountPercent = (int)Math.Round((1 - Model.Price / Model.OldPrice!.Value) * 100);
+    }
+}
+
+<a asp-controller="Product"
+   asp-action="Details"
+   asp-route-id="@Model.Id"
+   class="shop-service-product-card">
+
+    <div class="shop-service-product-image">
+        @if (hasDiscount)
+        {
+            <span>-@discountPercent%</span>
+        }
+
+        <img src="@imageUrl"
+             alt="@Model.Name"
+             onerror="this.src='/images/products/no-image.jpg'" />
+    </div>
+
+    <div class="shop-service-product-info">
+        <small>@(Model.Category?.Name ?? "Chưa phân loại")</small>
+        <h3>@Model.Name</h3>
+
+        <div class="shop-service-product-price">
+            <strong>@Model.Price.ToString("N0") đ</strong>
+
+            @if (hasDiscount)
+            {
+                <del>@Model.OldPrice!.Value.ToString("N0") đ</del>
+            }
+        </div>
+    </div>
+</a>

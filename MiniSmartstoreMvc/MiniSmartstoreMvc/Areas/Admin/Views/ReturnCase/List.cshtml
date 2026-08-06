@@ -1,0 +1,390 @@
+﻿@using MiniSmartstoreMvc.Models
+@model List<MiniSmartstoreMvc.ViewModels.AdminReturnCaseListItemViewModel>
+
+@{
+    ViewData["Title"] = "Hoàn trả / đổi trả";
+
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int pageSize = ViewBag.PageSize ?? 25;
+    int totalItems = ViewBag.TotalItems ?? 0;
+    bool filterOpen = ViewBag.FilterOpen ?? false;
+
+    int? id = ViewBag.Id as int?;
+    string? currentType = ViewBag.Type as string;
+    string? createdFrom = ViewBag.CreatedFrom as string;
+    string? createdTo = ViewBag.CreatedTo as string;
+    string? orderCode = ViewBag.OrderCode as string;
+    string? customerName = ViewBag.CustomerName as string;
+    string? email = ViewBag.Email as string;
+    string? currentStatus = ViewBag.Status as string;
+}
+
+<div class="admin-sales-page">
+    <div class="admin-sales-card">
+        <div class="admin-sales-header">
+            <div>
+                <h1>Hoàn trả / đổi trả</h1>
+                <p>Quản lý các yêu cầu hoàn trả, đổi trả hoặc hủy yêu cầu từ khách hàng.</p>
+            </div>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-alert admin-alert-success">@TempData["Success"]</div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-alert admin-alert-danger">@TempData["Error"]</div>
+        }
+
+        <div class="admin-sales-toolbar">
+            <button type="button"
+                    class="admin-filter-btn"
+                    id="returnFilterToggle"
+                    title="Bộ lọc">
+                <span class="admin-css-icon admin-icon-filter"></span>
+            </button>
+        </div>
+
+        <div class="admin-sales-manager @(filterOpen ? "filter-open" : "")" id="returnCaseManager">
+            <aside class="admin-sales-filter-panel">
+                <form asp-area="Admin"
+                      asp-controller="ReturnCase"
+                      asp-action="List"
+                      method="get">
+
+                    <input type="hidden" name="filterOpen" value="true" />
+
+                    <h3>Bộ lọc</h3>
+
+                    <div class="admin-filter-group">
+                        <label>ID</label>
+                        <input type="number"
+                               name="id"
+                               value="@id"
+                               placeholder="Nhập ID" />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Loại yêu cầu</label>
+                        <select name="type">
+                            <option value="">Tất cả</option>
+                            <option value="@ReturnCaseType.Return"
+                                    selected="@(currentType == ReturnCaseType.Return.ToString() ? "selected" : null)">
+                                Hoàn trả
+                            </option>
+                            <option value="@ReturnCaseType.Withdrawal"
+                                    selected="@(currentType == ReturnCaseType.Withdrawal.ToString() ? "selected" : null)">
+                                Rút yêu cầu
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Ngày tạo</label>
+                        <div class="admin-filter-row">
+                            <input type="date" name="createdFrom" value="@createdFrom" />
+                            <input type="date" name="createdTo" value="@createdTo" />
+                        </div>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Mã đơn hàng</label>
+                        <input type="text"
+                               name="orderCode"
+                               value="@orderCode"
+                               placeholder="Nhập mã đơn hàng" />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Tên khách hàng</label>
+                        <input type="text"
+                               name="customerName"
+                               value="@customerName"
+                               placeholder="Nhập tên khách hàng" />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Email thanh toán</label>
+                        <input type="text"
+                               name="email"
+                               value="@email"
+                               placeholder="Nhập email" />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Trạng thái yêu cầu</label>
+                        <select name="status">
+                            <option value="">Tất cả</option>
+                            <option value="@ReturnCaseStatus.Pending"
+                                    selected="@(currentStatus == ReturnCaseStatus.Pending.ToString() ? "selected" : null)">
+                                Chờ xử lý
+                            </option>
+                            <option value="@ReturnCaseStatus.Received"
+                                    selected="@(currentStatus == ReturnCaseStatus.Received.ToString() ? "selected" : null)">
+                                Đã nhận yêu cầu
+                            </option>
+                            <option value="@ReturnCaseStatus.ReturnAuthorized"
+                                    selected="@(currentStatus == ReturnCaseStatus.ReturnAuthorized.ToString() ? "selected" : null)">
+                                Đã duyệt hoàn trả
+                            </option>
+                            <option value="@ReturnCaseStatus.ItemsRepaired"
+                                    selected="@(currentStatus == ReturnCaseStatus.ItemsRepaired.ToString() ? "selected" : null)">
+                                Đã sửa hàng
+                            </option>
+                            <option value="@ReturnCaseStatus.ItemsRefunded"
+                                    selected="@(currentStatus == ReturnCaseStatus.ItemsRefunded.ToString() ? "selected" : null)">
+                                Đã hoàn tiền
+                            </option>
+                            <option value="@ReturnCaseStatus.RequestRejected"
+                                    selected="@(currentStatus == ReturnCaseStatus.RequestRejected.ToString() ? "selected" : null)">
+                                Từ chối
+                            </option>
+                            <option value="@ReturnCaseStatus.Cancelled"
+                                    selected="@(currentStatus == ReturnCaseStatus.Cancelled.ToString() ? "selected" : null)">
+                                Đã hủy
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-actions">
+                        <button type="submit" class="admin-filter-submit">
+                            Áp dụng bộ lọc
+                        </button>
+
+                        <a asp-area="Admin"
+                           asp-controller="ReturnCase"
+                           asp-action="List"
+                           class="admin-filter-reset">
+                            Đặt lại
+                        </a>
+                    </div>
+                </form>
+            </aside>
+
+            <section class="admin-sales-table-section">
+                <div class="admin-sales-table-wrap">
+                    <table class="admin-sales-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 90px;">ID</th>
+                                <th>Sản phẩm</th>
+                                <th style="width: 120px;">Số lượng</th>
+                                <th>Khách hàng</th>
+                                <th>Email thanh toán</th>
+                                <th style="width: 130px;">Đơn hàng</th>
+                                <th style="width: 170px;">Trạng thái</th>
+                                <th style="width: 160px;">Ngày tạo</th>
+                                <th style="width: 70px;"></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @if (Model.Any())
+                            {
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td>#@item.Id</td>
+
+                                        <td>
+                                            <a asp-area=""
+                                               asp-controller="Product"
+                                               asp-action="Details"
+                                               asp-route-id="@item.ProductId"
+                                               class="admin-sales-main-link">
+                                                @item.ProductName
+                                            </a>
+
+                                            <small>@GetTypeText(item.Type)</small>
+                                        </td>
+
+                                        <td>@item.Quantity</td>
+
+                                        <td>
+                                            <span class="admin-sales-main-text">@item.CustomerName</span>
+                                        </td>
+
+                                        <td>@item.CustomerEmail</td>
+
+                                        <td>
+                                            <a asp-area="Admin"
+                                               asp-controller="Order"
+                                               asp-action="Details"
+                                               asp-route-id="@item.OrderId">
+                                                @item.OrderCode
+                                            </a>
+                                        </td>
+
+                                        <td>
+                                            <span class="admin-return-status @GetReturnStatusClass(item.Status)">
+                                                @GetReturnStatusText(item.Status)
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            @item.CreatedAt.ToString("dd/MM/yyyy")
+                                            <small>@item.CreatedAt.ToString("HH:mm")</small>
+                                        </td>
+
+                                        <td class="text-end">
+                                            <div class="dropdown">
+                                                <button type="button"
+                                                        class="admin-more-btn"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
+                                                    <span class="admin-css-icon admin-icon-more"></span>
+                                                </button>
+
+                                                <ul class="dropdown-menu dropdown-menu-end admin-row-menu">
+                                                    <li class="dropdown-header">Cập nhật trạng thái</li>
+
+                                                    @foreach (ReturnCaseStatus status in Enum.GetValues(typeof(ReturnCaseStatus)))
+                                                    {
+                                                        <li>
+                                                            <form asp-area="Admin"
+                                                                  asp-controller="ReturnCase"
+                                                                  asp-action="UpdateStatus"
+                                                                  method="post">
+                                                                @Html.AntiForgeryToken()
+
+                                                                <input type="hidden" name="id" value="@item.Id" />
+                                                                <input type="hidden" name="status" value="@status" />
+
+                                                                <button type="submit" class="dropdown-item">
+                                                                    @GetReturnStatusText(status)
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="9" class="admin-empty-row">
+                                        Không có yêu cầu hoàn trả nào.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="admin-sales-footer">
+                    <div class="admin-pagination">
+                        <a class="admin-page-btn"
+                           asp-area="Admin"
+                           asp-controller="ReturnCase"
+                           asp-action="List"
+                           asp-route-page="1"
+                           asp-route-pageSize="@pageSize">
+                            <span class="admin-css-icon admin-icon-refresh"></span>
+                        </a>
+
+                        <a class="admin-page-btn @(currentPage <= 1 ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="ReturnCase"
+                           asp-action="List"
+                           asp-route-page="@(currentPage - 1)"
+                           asp-route-pageSize="@pageSize">
+                            ‹
+                        </a>
+
+                        <span class="admin-page-btn active">@currentPage</span>
+
+                        <a class="admin-page-btn @(currentPage >= totalPages ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="ReturnCase"
+                           asp-action="List"
+                           asp-route-page="@(currentPage + 1)"
+                           asp-route-pageSize="@pageSize">
+                            ›
+                        </a>
+                    </div>
+
+                    <div class="admin-footer-info">
+                        <span>Đang hiển thị @Model.Count / @totalItems yêu cầu</span>
+
+                        <form asp-area="Admin"
+                              asp-controller="ReturnCase"
+                              asp-action="List"
+                              method="get">
+                            <select name="pageSize"
+                                    onchange="this.form.submit()"
+                                    class="admin-page-size">
+                                <option value="10" selected="@(pageSize == 10 ? "selected" : null)">10 dòng / trang</option>
+                                <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25 dòng / trang</option>
+                                <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50 dòng / trang</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetTypeText(ReturnCaseType type)
+    {
+        return type switch
+        {
+            ReturnCaseType.Return => "Hoàn trả",
+            ReturnCaseType.Withdrawal => "Rút yêu cầu",
+            _ => "Không xác định"
+        };
+    }
+
+    string GetReturnStatusText(ReturnCaseStatus status)
+    {
+        return status switch
+        {
+            ReturnCaseStatus.Pending => "Chờ xử lý",
+            ReturnCaseStatus.Received => "Đã nhận yêu cầu",
+            ReturnCaseStatus.ReturnAuthorized => "Đã duyệt hoàn trả",
+            ReturnCaseStatus.ItemsRepaired => "Đã sửa hàng",
+            ReturnCaseStatus.ItemsRefunded => "Đã hoàn tiền",
+            ReturnCaseStatus.RequestRejected => "Từ chối",
+            ReturnCaseStatus.Cancelled => "Đã hủy",
+            _ => "Không xác định"
+        };
+    }
+
+    string GetReturnStatusClass(ReturnCaseStatus status)
+    {
+        return status switch
+        {
+            ReturnCaseStatus.Pending => "pending",
+            ReturnCaseStatus.Received => "received",
+            ReturnCaseStatus.ReturnAuthorized => "authorized",
+            ReturnCaseStatus.ItemsRepaired => "repaired",
+            ReturnCaseStatus.ItemsRefunded => "refunded",
+            ReturnCaseStatus.RequestRejected => "rejected",
+            ReturnCaseStatus.Cancelled => "cancelled",
+            _ => "pending"
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const manager = document.getElementById("returnCaseManager");
+            const filterBtn = document.getElementById("returnFilterToggle");
+
+            if (manager && filterBtn) {
+                filterBtn.addEventListener("click", function () {
+                    manager.classList.toggle("filter-open");
+                    filterBtn.classList.toggle("active");
+                });
+            }
+        });
+    </script>
+}

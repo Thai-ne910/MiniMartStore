@@ -1,0 +1,100 @@
+﻿@model IEnumerable<MiniSmartstoreMvc.ViewModels.AdminCustomerListItemViewModel>
+
+@{
+    ViewData["Title"] = "Quản lý khách hàng";
+}
+
+<div class="admin-page-title">
+    <h2>Quản lý khách hàng</h2>
+    <p>Xem danh sách khách hàng, số đơn hàng và tổng tiền đã mua.</p>
+</div>
+
+<div class="admin-card mb-4">
+    <div class="admin-card-body">
+        <form asp-area="Admin" asp-controller="Customer" asp-action="Index" method="get" class="row g-3">
+            <div class="col-md-10">
+                <input type="text"
+                       name="keyword"
+                       value="@ViewBag.Keyword"
+                       class="form-control"
+                       placeholder="Tìm theo email, họ tên hoặc số điện thoại..." />
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    Tìm kiếm
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h5>Danh sách khách hàng</h5>
+    </div>
+
+    <div class="admin-card-body p-0">
+        <div class="table-responsive">
+            <table class="table admin-table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Họ tên</th>
+                        <th>Số điện thoại</th>
+                        <th>Địa chỉ</th>
+                        <th>Số đơn</th>
+                        <th>Tổng đã mua</th>
+                        <th style="width: 120px;">Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@item.Email</strong>
+                                </td>
+
+                                <td>@(item.FullName ?? "Chưa cập nhật")</td>
+
+                                <td>@(item.PhoneNumber ?? "Chưa cập nhật")</td>
+
+                                <td>@(item.Address ?? "Chưa cập nhật")</td>
+
+                                <td>
+                                    <span class="badge bg-primary">@item.OrderCount</span>
+                                </td>
+
+                                <td class="text-danger fw-bold">
+                                    @item.TotalSpent.ToString("N0") đ
+                                </td>
+
+                                <td>
+                                    <a asp-area="Admin"
+                                       asp-controller="Customer"
+                                       asp-action="Details"
+                                       asp-route-id="@item.UserId"
+                                       class="btn btn-sm btn-primary">
+                                        Chi tiết
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center p-4">
+                                Không tìm thấy khách hàng nào.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

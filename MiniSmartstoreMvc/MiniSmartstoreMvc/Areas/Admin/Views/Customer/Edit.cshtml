@@ -1,0 +1,231 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminCustomerFormViewModel
+
+@{
+    ViewData["Title"] = "Sửa khách hàng";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin/admin-customer.css" asp-append-version="true" />
+}
+
+<div class="admin-customer-page">
+    <div class="admin-customer-card admin-customer-edit-card">
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-customer-alert success">@TempData["Success"]</div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-customer-alert danger">@TempData["Error"]</div>
+        }
+
+        <form asp-area="Admin" asp-controller="Customer" asp-action="Edit" method="post" id="customerEditForm">
+            @Html.AntiForgeryToken()
+
+            <div class="admin-customer-form-header">
+                <div class="admin-customer-form-title">
+                    <a asp-area="Admin"
+                       asp-controller="Customer"
+                       asp-action="List"
+                       class="admin-customer-back">
+                        ←
+                    </a>
+
+                    <h1>Sửa khách hàng - @Model.Email</h1>
+                </div>
+
+                <div class="admin-customer-actions">
+                    <button type="submit" class="admin-customer-primary-btn">
+                        Lưu
+                    </button>
+
+                    <button type="submit"
+                            name="saveContinue"
+                            value="true"
+                            class="admin-customer-btn">
+                        Lưu và tiếp tục sửa
+                    </button>
+
+                    <button type="submit"
+                            formaction="@Url.Action("Delete", "Customer", new { area = "Admin", id = Model.Id })"
+                            formmethod="post"
+                            class="admin-customer-danger-btn"
+                            onclick="return confirm('Bạn có chắc muốn xóa khách hàng này không? Nếu khách đã có đơn hàng, hệ thống sẽ chỉ khóa tài khoản để giữ dữ liệu.');">
+                        Xóa khách hàng
+                    </button>
+                </div>
+            </div>
+
+            <div class="admin-customer-form-layout">
+                <aside class="admin-customer-tabs">
+                    <button type="button" class="admin-customer-tab active" data-customer-tab="general">
+                        <span class="customer-tab-icon customer-icon-user"></span>
+                        <span>Tổng quan</span>
+                    </button>
+
+                    <button type="button" class="admin-customer-tab" data-customer-tab="orders">
+                        <span class="customer-tab-icon customer-icon-order"></span>
+                        <span>Đơn hàng</span>
+                    </button>
+
+                    <button type="button" class="admin-customer-tab" data-customer-tab="addresses">
+                        <span class="customer-tab-icon customer-icon-address"></span>
+                        <span>Địa chỉ</span>
+                    </button>
+
+                    <button type="button" class="admin-customer-tab" data-customer-tab="cart">
+                        <span class="customer-tab-icon customer-icon-cart"></span>
+                        <span>Giỏ hàng hiện tại</span>
+                    </button>
+                </aside>
+
+                <section>
+                    <div class="admin-customer-panel active" id="customer-tab-general">
+                        <partial name="_Form" model="Model" />
+                    </div>
+
+                    <div class="admin-customer-panel" id="customer-tab-orders">
+                        @if (Model.Orders.Any())
+                        {
+                            <table class="admin-customer-readonly-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã đơn</th>
+                                        <th>Ngày đặt</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thanh toán</th>
+                                        <th class="text-end">Tổng tiền</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var order in Model.Orders)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-area="Admin"
+                                                   asp-controller="Order"
+                                                   asp-action="Details"
+                                                   asp-route-id="@order.Id"
+                                                   class="admin-customer-name">
+                                                    #@order.Id
+                                                </a>
+                                                <span class="admin-customer-sub">@order.OrderCode</span>
+                                            </td>
+                                            <td>@order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@order.OrderStatusText</td>
+                                            <td>@order.PaymentStatusText</td>
+                                            <td class="text-end">@order.TotalAmount.ToString("N0") đ</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <div class="admin-customer-empty">
+                                Khách hàng này chưa có đơn hàng.
+                            </div>
+                        }
+                    </div>
+
+                    <div class="admin-customer-panel" id="customer-tab-addresses">
+                        @if (!string.IsNullOrWhiteSpace(Model.AddressInfo.Address))
+                        {
+                            <div class="admin-customer-address-card">
+                                <div class="admin-customer-address-body">
+                                    <strong>@Model.AddressInfo.CustomerName</strong><br />
+                                    Email: @Model.AddressInfo.Email<br />
+                                    Số điện thoại: @(string.IsNullOrWhiteSpace(Model.AddressInfo.PhoneNumber) ? "Chưa có" : Model.AddressInfo.PhoneNumber)<br />
+                                    Địa chỉ: @Model.AddressInfo.Address
+                                </div>
+
+                                <div class="admin-customer-address-footer">
+                                    Địa chỉ mặc định
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="admin-customer-empty">
+                                Khách hàng này chưa có địa chỉ.
+                            </div>
+                        }
+                    </div>
+
+                    <div class="admin-customer-panel" id="customer-tab-cart">
+                        @if (Model.CartItems.Any())
+                        {
+                            <table class="admin-customer-readonly-table">
+                                <thead>
+                                    <tr>
+                                        <th>Sản phẩm</th>
+                                        <th class="text-center">Hiển thị</th>
+                                        <th class="text-center">Số lượng</th>
+                                        <th class="text-end">Đơn giá</th>
+                                        <th class="text-end">Tổng tiền</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var cart in Model.CartItems)
+                                    {
+                                        <tr>
+                                            <td>@cart.ProductName</td>
+                                            <td class="text-center">
+                                                @(cart.ProductActive ? "✓" : "Ẩn")
+                                            </td>
+                                            <td class="text-center">@cart.Quantity</td>
+                                            <td class="text-end">@cart.UnitPrice.ToString("N0") đ</td>
+                                            <td class="text-end">@cart.TotalPrice.ToString("N0") đ</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <div class="admin-customer-empty">
+                                Giỏ hàng hiện tại đang trống.
+                            </div>
+                        }
+                    </div>
+                </section>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const buttons = document.querySelectorAll(".admin-customer-tab[data-customer-tab]");
+            const panels = document.querySelectorAll(".admin-customer-panel");
+
+            buttons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const target = button.dataset.customerTab;
+
+                    buttons.forEach(function (item) {
+                        item.classList.remove("active");
+                    });
+
+                    panels.forEach(function (panel) {
+                        panel.classList.remove("active");
+                    });
+
+                    button.classList.add("active");
+
+                    const targetPanel = document.getElementById("customer-tab-" + target);
+
+                    if (targetPanel) {
+                        targetPanel.classList.add("active");
+                    }
+                });
+            });
+        });
+    </script>
+}

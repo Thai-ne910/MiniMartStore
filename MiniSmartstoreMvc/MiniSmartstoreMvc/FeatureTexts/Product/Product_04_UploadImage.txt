@@ -1,0 +1,1449 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using MiniSmartstoreMvc.Data;
+using MiniSmartstoreMvc.Models;
+using System.Text.RegularExpressions;
+
+namespace MiniSmartstoreMvc.Areas.Admin.Controllers
+{
+    [Area("Admin")]
+    [Authorize(Roles = "Admin")]
+    public class ProductController : Controller
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
+
+        public ProductController(ApplicationDbContext context, IWebHostEnvironment environment)
+        {
+            _context = context;
+            _environment = environment;
+        }
+
+        public async Task<IActionResult> Index(
+            string? search,
+            int? categoryId,
+            decimal? minPrice,
+            decimal? maxPrice,
+            bool? published,
+            string? sortBy,
+            int page = 1,
+            int pageSize = 25,
+            bool filterOpen = false)
+        {
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (pageSize != 10 && pageSize != 25 && pageSize != 50)
+            {
+                pageSize = 25;
+            }
+
+            var productsQuery = _context.Products
+                .Include(p => p.Category)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                productsQuery = productsQuery.Where(p =>
+                    p.Name.Contains(search) ||
+                    (p.ProductCode != null && p.ProductCode.Contains(search)) ||
+                    (p.Alias != null && p.Alias.Contains(search)) ||
+                    (p.Description != null && p.Description.Contains(search)));
+            }
+
+            if (categoryId.HasValue && categoryId.Value > 0)
+            {
+                productsQuery = productsQuery.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            if (minPrice.HasValue)
+            {
+                productsQuery = productsQuery.Where(p => p.Price >= minPrice.Value);
+            }
+
+            if (maxPrice.HasValue)
+            {
+                productsQuery = productsQuery.Where(p => p.Price <= maxPrice.Value);
+            }
+
+            if (published.HasValue)
+            {
+                productsQuery = productsQuery.Where(p => p.IsActive == published.Value);
+            }
+
+            productsQuery = sortBy switch
+            {
+                "name_asc" => productsQuery.OrderBy(p => p.Name),
+                "price_asc" => productsQuery.OrderBy(p => p.Price),
+                "price_desc" => productsQuery.OrderByDescending(p => p.Price),
+                "stock_asc" => productsQuery.OrderBy(p => p.StockQuantity),
+                "stock_desc" => productsQuery.OrderByDescending(p => p.StockQuantity),
+                "featured" => productsQuery.OrderByDescending(p => p.IsFeatured).ThenBy(p => p.DisplayOrder).ThenByDescending(p => p.CreatedAt),
+                "newest" => productsQuery.OrderByDescending(p => p.CreatedAt),
+                "display_order" => productsQuery.OrderBy(p => p.DisplayOrder).ThenByDescending(p => p.CreatedAt),
+                _ => productsQuery.OrderBy(p => p.DisplayOrder).ThenByDescending(p => p.CreatedAt)
+            };
+
+            int totalItems = await productsQuery.CountAsync();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var products = await productsQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            ViewBag.Search = search;
+            ViewBag.CategoryId = categoryId;
+            ViewBag.MinPrice = minPrice;
+            ViewBag.MaxPrice = maxPrice;
+            ViewBag.Published = published;
+            ViewBag.SortBy = sortBy;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.FilterOpen = filterOpen;
+
+            ViewBag.Categories = new SelectList(
+                await _context.Categories.OrderBy(c => c.Name).ToListAsync(),
+                "Id",
+                "Name",
+                categoryId
+            );
+
+            return View(products);
+        }
+
+        public async Task<IActionResult> Create()
+        {
+            await LoadCategoriesAsync();
+
+            var product = new Product
+            {
+                IsActive = true,
+                IsFeatured = false,
+                AllowCustomerReviews = true,
+                DeliveryTime = "3 - 5 ngày",
+                LowStockThreshold = 5,
+                DisplayOrder = 0,
+                StockQuantity = 0,
+                ImageUrl = "/images/products/no-image.jpg"
+            };
+
+            return View(product);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(Product product, IFormFile? imageFile, List<IFormFile>? galleryImages, string? saveMode)
+        {
+            PrepareProductBeforeSave(product, isNew: true);
+
+            if (await _context.Products.AnyAsync(p => p.Name == product.Name))
+            {
+                ModelState.AddModelError("Name", "Tên sản phẩm đã tồn tại.");
+            }
+
+            if (!await _context.Categories.AnyAsync(c => c.Id == product.CategoryId))
+            {
+                ModelState.AddModelError("CategoryId", "Danh mục không hợp lệ.");
+            }
+
+            ValidateProduct(product);
+
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                var uploadResult = await UploadProductImageAsync(imageFile);
+
+                if (!uploadResult.Success)
+                {
+                    ModelState.AddModelError("ImageUrl", uploadResult.ErrorMessage ?? "Upload ảnh thất bại.");
+                }
+                else
+                {
+                    product.ImageUrl = uploadResult.ImageUrl;
+                }
+            }
+            else
+            {
+                product.ImageUrl = string.IsNullOrWhiteSpace(product.ImageUrl)
+                    ? "/images/products/no-image.jpg"
+                    : product.ImageUrl;
+            }
+
+            if (ModelState.IsValid)
+            {
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
+
+                await SaveProductGalleryImagesAsync(product.Id, galleryImages);
+
+                TempData["Success"] = "Thêm sản phẩm thành công.";
+
+                if (saveMode == "continue")
+                {
+                    return RedirectToAction(nameof(Edit), new { id = product.Id });
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            await LoadCategoriesAsync(product.CategoryId);
+            return View(product);
+        }
+
+        public async Task<IActionResult> Edit(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.ProductImages)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            await LoadCategoriesAsync(product.CategoryId);
+            await LoadProductOrdersAsync(product.Id);
+
+            return View(product);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Product product, IFormFile? imageFile, List<IFormFile>? galleryImages, string? saveMode)
+        {
+            if (id != product.Id)
+            {
+                return NotFound();
+            }
+
+            var oldProduct = await _context.Products
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (oldProduct == null)
+            {
+                return NotFound();
+            }
+
+            if (await _context.Products.AnyAsync(p => p.Name == product.Name && p.Id != id))
+            {
+                ModelState.AddModelError("Name", "Tên sản phẩm đã tồn tại.");
+            }
+
+            if (!await _context.Categories.AnyAsync(c => c.Id == product.CategoryId))
+            {
+                ModelState.AddModelError("CategoryId", "Danh mục không hợp lệ.");
+            }
+
+            product.CreatedAt = oldProduct.CreatedAt;
+            product.UpdatedAt = DateTime.Now;
+
+            if (string.IsNullOrWhiteSpace(product.ProductCode))
+            {
+                product.ProductCode = oldProduct.ProductCode;
+
+                if (string.IsNullOrWhiteSpace(product.ProductCode))
+                {
+                    product.ProductCode = CreateProductCode();
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(product.Alias))
+            {
+                product.Alias = CreateAlias(product.Name);
+            }
+
+            ValidateProduct(product);
+
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                var uploadResult = await UploadProductImageAsync(imageFile);
+
+                if (!uploadResult.Success)
+                {
+                    ModelState.AddModelError("ImageUrl", uploadResult.ErrorMessage ?? "Upload ảnh thất bại.");
+                }
+                else
+                {
+                    product.ImageUrl = uploadResult.ImageUrl;
+                }
+            }
+            else
+            {
+                product.ImageUrl = oldProduct.ImageUrl;
+            }
+
+            if (string.IsNullOrWhiteSpace(product.ImageUrl))
+            {
+                product.ImageUrl = "/images/products/no-image.jpg";
+            }
+
+            if (ModelState.IsValid)
+            {
+                _context.Products.Update(product);
+                await _context.SaveChangesAsync();
+
+                await SaveProductGalleryImagesAsync(product.Id, galleryImages);
+
+                TempData["Success"] = "Cập nhật sản phẩm thành công.";
+
+                if (saveMode == "continue")
+                {
+                    return RedirectToAction(nameof(Edit), new { id = product.Id });
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            await LoadCategoriesAsync(product.CategoryId);
+            await LoadProductOrdersAsync(product.Id);
+
+            return View(product);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleActive(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            product.IsActive = !product.IsActive;
+            product.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = product.IsActive
+                ? "Đã hiện sản phẩm."
+                : "Đã ẩn sản phẩm.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            var hasOrders = await _context.OrderDetails.AnyAsync(od => od.ProductId == id);
+
+            if (hasOrders)
+            {
+                product.IsActive = false;
+                product.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                TempData["Error"] = "Sản phẩm đã có trong đơn hàng nên không xóa cứng. Hệ thống đã ẩn sản phẩm.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Xóa sản phẩm thành công.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        private void PrepareProductBeforeSave(Product product, bool isNew)
+        {
+            if (isNew)
+            {
+                product.CreatedAt = DateTime.Now;
+            }
+
+            product.UpdatedAt = DateTime.Now;
+
+            if (string.IsNullOrWhiteSpace(product.ProductCode))
+            {
+                product.ProductCode = CreateProductCode();
+            }
+
+            if (string.IsNullOrWhiteSpace(product.Alias))
+            {
+                product.Alias = CreateAlias(product.Name);
+            }
+
+            if (string.IsNullOrWhiteSpace(product.ImageUrl))
+            {
+                product.ImageUrl = "/images/products/no-image.jpg";
+            }
+
+            if (string.IsNullOrWhiteSpace(product.DeliveryTime))
+            {
+                product.DeliveryTime = "3 - 5 ngày";
+            }
+
+            if (product.LowStockThreshold < 0)
+            {
+                product.LowStockThreshold = 0;
+            }
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteProductImage(int id)
+        {
+            var image = await _context.ProductImages
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (image == null)
+            {
+                return NotFound();
+            }
+
+            int productId = image.ProductId;
+
+            DeletePhysicalImageIfExists(image.ImageUrl);
+
+            _context.ProductImages.Remove(image);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Đã xóa ảnh phụ.";
+            return RedirectToAction(nameof(Edit), new { id = productId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetMainProductImage(int id)
+        {
+            var image = await _context.ProductImages
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (image == null)
+            {
+                return NotFound();
+            }
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(x => x.Id == image.ProductId);
+
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            product.ImageUrl = image.ImageUrl;
+            product.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Đã đặt ảnh này làm ảnh chính.";
+            return RedirectToAction(nameof(Edit), new { id = product.Id });
+        }
+        private void ValidateProduct(Product product)
+        {
+            if (string.IsNullOrWhiteSpace(product.Name))
+            {
+                ModelState.AddModelError("Name", "Tên sản phẩm không được để trống.");
+            }
+
+            if (product.Price <= 0)
+            {
+                ModelState.AddModelError("Price", "Giá sản phẩm phải lớn hơn 0.");
+            }
+
+            if (product.OldPrice != null && product.OldPrice < product.Price)
+            {
+                ModelState.AddModelError("OldPrice", "Giá cũ không được nhỏ hơn giá bán.");
+            }
+
+            if (product.StockQuantity < 0)
+            {
+                ModelState.AddModelError("StockQuantity", "Số lượng tồn kho không được âm.");
+            }
+
+            if (product.LowStockThreshold < 0)
+            {
+                ModelState.AddModelError("LowStockThreshold", "Ngưỡng cảnh báo tồn kho không được âm.");
+            }
+
+            if (product.AvailableStartDate.HasValue &&
+                product.AvailableEndDate.HasValue &&
+                product.AvailableEndDate.Value < product.AvailableStartDate.Value)
+            {
+                ModelState.AddModelError("AvailableEndDate", "Ngày ngừng bán không được nhỏ hơn ngày bắt đầu bán.");
+            }
+        }
+
+        private async Task LoadCategoriesAsync(int? selectedId = null)
+        {
+            ViewBag.Categories = new SelectList(
+                await _context.Categories
+                    .Where(c => c.IsActive)
+                    .OrderBy(c => c.Name)
+                    .ToListAsync(),
+                "Id",
+                "Name",
+                selectedId
+            );
+        }
+
+        private async Task LoadProductOrdersAsync(int productId)
+        {
+            ViewBag.ProductOrders = await _context.OrderDetails
+                .Include(od => od.Order)
+                .Where(od => od.ProductId == productId)
+                .OrderByDescending(od => od.Order != null ? od.Order.CreatedAt : DateTime.MinValue)
+                .Take(10)
+                .ToListAsync();
+        }
+        private async Task SaveProductGalleryImagesAsync(int productId, List<IFormFile>? galleryImages)
+        {
+            if (galleryImages == null || !galleryImages.Any())
+            {
+                return;
+            }
+
+            int currentCount = await _context.ProductImages
+                .CountAsync(x => x.ProductId == productId);
+
+            foreach (var file in galleryImages)
+            {
+                if (file == null || file.Length <= 0)
+                {
+                    continue;
+                }
+
+                var uploadResult = await UploadProductImageAsync(file);
+
+                if (!uploadResult.Success || string.IsNullOrWhiteSpace(uploadResult.ImageUrl))
+                {
+                    continue;
+                }
+
+                _context.ProductImages.Add(new ProductImage
+                {
+                    ProductId = productId,
+                    ImageUrl = uploadResult.ImageUrl,
+                    DisplayOrder = currentCount,
+                    CreatedAt = DateTime.Now
+                });
+
+                currentCount++;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        private void DeletePhysicalImageIfExists(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+            {
+                return;
+            }
+
+            if (imageUrl.Contains("no-image.jpg", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            string relativePath = imageUrl.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString());
+            string fullPath = Path.Combine(_environment.WebRootPath, relativePath);
+
+            if (System.IO.File.Exists(fullPath))
+            {
+                System.IO.File.Delete(fullPath);
+            }
+        }
+        private async Task<(bool Success, string? ImageUrl, string? ErrorMessage)> UploadProductImageAsync(IFormFile imageFile)
+        {
+            string[] allowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+            string extension = Path.GetExtension(imageFile.FileName).ToLower();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                return (false, null, "Chỉ cho phép upload ảnh .jpg, .jpeg, .png, .webp.");
+            }
+
+            if (imageFile.Length > 3 * 1024 * 1024)
+            {
+                return (false, null, "Dung lượng ảnh không được vượt quá 3MB.");
+            }
+
+            string uploadFolder = Path.Combine(_environment.WebRootPath, "images", "products");
+
+            if (!Directory.Exists(uploadFolder))
+            {
+                Directory.CreateDirectory(uploadFolder);
+            }
+
+            string fileName = $"{Guid.NewGuid()}{extension}";
+            string filePath = Path.Combine(uploadFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await imageFile.CopyToAsync(stream);
+            }
+
+            string imageUrl = $"/images/products/{fileName}";
+
+            return (true, imageUrl, null);
+        }
+
+        private static string CreateProductCode()
+        {
+            return $"P-{DateTime.Now:yyyyMMddHHmmss}";
+        }
+
+        private static string CreateAlias(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "";
+            }
+
+            var normalized = text.ToLowerInvariant().Trim();
+
+            normalized = normalized
+                .Replace("đ", "d")
+                .Replace("á", "a").Replace("à", "a").Replace("ả", "a").Replace("ã", "a").Replace("ạ", "a")
+                .Replace("ă", "a").Replace("ắ", "a").Replace("ằ", "a").Replace("ẳ", "a").Replace("ẵ", "a").Replace("ặ", "a")
+                .Replace("â", "a").Replace("ấ", "a").Replace("ầ", "a").Replace("ẩ", "a").Replace("ẫ", "a").Replace("ậ", "a")
+                .Replace("é", "e").Replace("è", "e").Replace("ẻ", "e").Replace("ẽ", "e").Replace("ẹ", "e")
+                .Replace("ê", "e").Replace("ế", "e").Replace("ề", "e").Replace("ể", "e").Replace("ễ", "e").Replace("ệ", "e")
+                .Replace("í", "i").Replace("ì", "i").Replace("ỉ", "i").Replace("ĩ", "i").Replace("ị", "i")
+                .Replace("ó", "o").Replace("ò", "o").Replace("ỏ", "o").Replace("õ", "o").Replace("ọ", "o")
+                .Replace("ô", "o").Replace("ố", "o").Replace("ồ", "o").Replace("ổ", "o").Replace("ỗ", "o").Replace("ộ", "o")
+                .Replace("ơ", "o").Replace("ớ", "o").Replace("ờ", "o").Replace("ở", "o").Replace("ỡ", "o").Replace("ợ", "o")
+                .Replace("ú", "u").Replace("ù", "u").Replace("ủ", "u").Replace("ũ", "u").Replace("ụ", "u")
+                .Replace("ư", "u").Replace("ứ", "u").Replace("ừ", "u").Replace("ử", "u").Replace("ữ", "u").Replace("ự", "u")
+                .Replace("ý", "y").Replace("ỳ", "y").Replace("ỷ", "y").Replace("ỹ", "y").Replace("ỵ", "y");
+
+            normalized = Regex.Replace(normalized, @"[^a-z0-9\s-]", "");
+            normalized = Regex.Replace(normalized, @"\s+", "-");
+            normalized = Regex.Replace(normalized, @"-+", "-");
+
+            return normalized.Trim('-');
+        }
+    }
+}
+
+@model MiniSmartstoreMvc.Models.Product
+
+@{
+    ViewData["Title"] = "Thêm sản phẩm";
+    ViewBag.IsEdit = false;
+}
+
+<div class="admin-product-form-page">
+    <div class="admin-product-form-card">
+        <div class="admin-product-form-header">
+            <div class="admin-product-heading">
+                <a asp-area="Admin"
+                   asp-controller="Product"
+                   asp-action="Index"
+                   class="apf-back"
+                   title="Quay lại"></a>
+
+                <div>
+                    <h1>Thêm sản phẩm</h1>
+                    <p>Tạo sản phẩm mới, thiết lập giá bán, tồn kho, ảnh, danh mục và SEO.</p>
+                </div>
+            </div>
+
+            <div class="admin-product-actions">
+                <button type="submit"
+                        form="productForm"
+                        name="saveMode"
+                        value="save"
+                        class="apf-btn apf-btn-primary">
+                    Lưu
+                </button>
+
+                <button type="submit"
+                        form="productForm"
+                        name="saveMode"
+                        value="continue"
+                        class="apf-btn apf-btn-soft">
+                    Lưu và tiếp tục sửa
+                </button>
+            </div>
+        </div>
+
+        <partial name="_Form" model="Model" />
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            initAdminProductTabs();
+            initAdminProductImagePreview();
+            initAdminProductPricePreview();
+        });
+
+        function initAdminProductTabs() {
+            document.querySelectorAll(".apf-tab").forEach(function(button) {
+                button.addEventListener("click", function() {
+                    const tab = this.dataset.tab;
+
+                    document.querySelectorAll(".apf-tab").forEach(x => x.classList.remove("active"));
+                    document.querySelectorAll(".apf-panel").forEach(x => x.classList.remove("active"));
+
+                    this.classList.add("active");
+                    document.getElementById(tab)?.classList.add("active");
+                });
+            });
+        }
+
+        function initAdminProductImagePreview() {
+            const input = document.getElementById("imageFile");
+            const preview = document.getElementById("previewImage");
+
+            if (!input || !preview) return;
+
+            input.addEventListener("change", function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                preview.src = URL.createObjectURL(file);
+            });
+        }
+
+        function initAdminProductPricePreview() {
+            const priceInput = document.getElementById("Price");
+            const oldPriceInput = document.getElementById("OldPrice");
+            const pricePreview = document.getElementById("apfPricePreview");
+            const oldPricePreview = document.getElementById("apfOldPricePreview");
+            const discountPreview = document.getElementById("apfDiscountPreview");
+
+            function format(value) {
+                const number = Number(value || 0);
+                return number.toLocaleString("vi-VN") + " đ";
+            }
+
+            function update() {
+                const price = Number(priceInput?.value || 0);
+                const oldPrice = Number(oldPriceInput?.value || 0);
+
+                if (pricePreview) pricePreview.textContent = format(price);
+                if (oldPricePreview) oldPricePreview.textContent = oldPrice > 0 ? format(oldPrice) : "Chưa có";
+
+                let discount = 0;
+                if (oldPrice > price && oldPrice > 0) {
+                    discount = Math.round(((oldPrice - price) / oldPrice) * 100);
+                }
+
+                if (discountPreview) discountPreview.textContent = discount + "%";
+            }
+
+            priceInput?.addEventListener("input", update);
+            oldPriceInput?.addEventListener("input", update);
+            update();
+        }
+    </script>
+}
+
+@model MiniSmartstoreMvc.Models.Product
+
+@{
+    ViewData["Title"] = "Sửa sản phẩm";
+    ViewBag.IsEdit = true;
+}
+
+<div class="admin-product-form-page">
+    <div class="admin-product-form-card">
+        <div class="admin-product-form-header">
+            <div class="admin-product-heading">
+                <a asp-area="Admin"
+                   asp-controller="Product"
+                   asp-action="Index"
+                   class="apf-back"
+                   title="Quay lại"></a>
+
+                <div>
+                    <h1>Sửa sản phẩm - @Model.Name</h1>
+                    <p>Cập nhật thông tin, giá bán, kho hàng, hình ảnh, danh mục và SEO.</p>
+                </div>
+            </div>
+
+            <div class="admin-product-actions">
+                <a asp-area=""
+                   asp-controller="Product"
+                   asp-action="Details"
+                   asp-route-id="@Model.Id"
+                   target="_blank"
+                   class="apf-btn apf-btn-soft">
+                    Xem ngoài shop
+                </a>
+
+                <button type="submit"
+                        form="productForm"
+                        name="saveMode"
+                        value="save"
+                        class="apf-btn apf-btn-primary">
+                    Lưu
+                </button>
+
+                <button type="submit"
+                        form="productForm"
+                        name="saveMode"
+                        value="continue"
+                        class="apf-btn apf-btn-soft">
+                    Lưu và tiếp tục sửa
+                </button>
+
+                <button type="submit"
+                        form="productForm"
+                        formaction="@Url.Action("Delete", "Product", new { area = "Admin", id = Model.Id })"
+                        formmethod="post"
+                        class="apf-btn apf-btn-danger"
+                        onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này không? Nếu sản phẩm đã nằm trong đơn hàng, hệ thống sẽ chỉ ẩn sản phẩm.');">
+                    Xóa
+                </button>
+            </div>
+        </div>
+
+        <partial name="_Form" model="Model" />
+        <form id="productImageActionForm" method="post">
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            initAdminProductTabs();
+            initAdminProductImagePreview();
+            initAdminProductPricePreview();
+            initProductImageActionButtons();
+        });
+        function initProductImageActionButtons() {
+            document.querySelectorAll(".js-product-image-action").forEach(function(button) {
+                button.addEventListener("click", function() {
+                    const url = this.dataset.url;
+                    const confirmMessage = this.dataset.confirm;
+                    const form = document.getElementById("productImageActionForm");
+
+                    if (!url || !form) {
+                        return;
+                    }
+
+                    if (confirmMessage && !confirm(confirmMessage)) {
+                        return;
+                    }
+
+                    form.action = url;
+                    form.submit();
+                });
+            });
+        }
+        function initAdminProductTabs() {
+            document.querySelectorAll(".apf-tab").forEach(function(button) {
+                button.addEventListener("click", function() {
+                    const tab = this.dataset.tab;
+
+                    document.querySelectorAll(".apf-tab").forEach(x => x.classList.remove("active"));
+                    document.querySelectorAll(".apf-panel").forEach(x => x.classList.remove("active"));
+
+                    this.classList.add("active");
+                    document.getElementById(tab)?.classList.add("active");
+                });
+            });
+        }
+
+        function initAdminProductImagePreview() {
+            const input = document.getElementById("imageFile");
+            const preview = document.getElementById("previewImage");
+
+            if (!input || !preview) return;
+
+            input.addEventListener("change", function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                preview.src = URL.createObjectURL(file);
+            });
+        }
+
+        function initAdminProductPricePreview() {
+            const priceInput = document.getElementById("Price");
+            const oldPriceInput = document.getElementById("OldPrice");
+            const pricePreview = document.getElementById("apfPricePreview");
+            const oldPricePreview = document.getElementById("apfOldPricePreview");
+            const discountPreview = document.getElementById("apfDiscountPreview");
+
+            function format(value) {
+                const number = Number(value || 0);
+                return number.toLocaleString("vi-VN") + " đ";
+            }
+
+            function update() {
+                const price = Number(priceInput?.value || 0);
+                const oldPrice = Number(oldPriceInput?.value || 0);
+
+                if (pricePreview) pricePreview.textContent = format(price);
+                if (oldPricePreview) oldPricePreview.textContent = oldPrice > 0 ? format(oldPrice) : "Chưa có";
+
+                let discount = 0;
+                if (oldPrice > price && oldPrice > 0) {
+                    discount = Math.round(((oldPrice - price) / oldPrice) * 100);
+                }
+
+                if (discountPreview) discountPreview.textContent = discount + "%";
+            }
+
+            priceInput?.addEventListener("input", update);
+            oldPriceInput?.addEventListener("input", update);
+            update();
+        }
+    </script>
+}
+
+@model MiniSmartstoreMvc.Models.Product
+
+@{
+    bool isEdit = ViewBag.IsEdit as bool? ?? false;
+    var productOrders = ViewBag.ProductOrders as List<MiniSmartstoreMvc.Models.OrderDetail> ?? new();
+
+    string formAction = Url.Action(
+        isEdit ? "Edit" : "Create",
+        "Product",
+        new { area = "Admin", id = isEdit ? Model.Id : (int?)null }
+    ) ?? "";
+
+    bool isOutOfStock = Model.StockQuantity <= 0;
+    bool isLowStock = Model.StockQuantity > 0 && Model.StockQuantity <= Model.LowStockThreshold;
+}
+
+<form id="productForm"
+      action="@formAction"
+      method="post"
+      enctype="multipart/form-data"
+      class="apf-form">
+
+    @Html.AntiForgeryToken()
+
+    @if (isEdit)
+    {
+        <input type="hidden" asp-for="Id" />
+    }
+
+    <input type="hidden" asp-for="ImageUrl" />
+
+    <div asp-validation-summary="ModelOnly" class="apf-validation"></div>
+
+    <div class="apf-layout">
+        <aside class="apf-sidebar">
+            <button type="button" class="apf-tab active" data-tab="apf-general">
+                <span class="apf-tab-icon"><i class="bi bi-info-circle"></i></span>
+                <span>Tổng quan</span>
+            </button>
+
+            <button type="button" class="apf-tab" data-tab="apf-inventory">
+                <span class="apf-tab-icon"><i class="bi bi-box-seam"></i></span>
+                <span>Kho hàng</span>
+            </button>
+
+            <button type="button" class="apf-tab" data-tab="apf-price">
+                <span class="apf-tab-icon"><i class="bi bi-cash-coin"></i></span>
+                <span>Giá bán</span>
+            </button>
+
+            <button type="button" class="apf-tab" data-tab="apf-picture">
+                <span class="apf-tab-icon"><i class="bi bi-image"></i></span>
+                <span>Hình ảnh</span>
+            </button>
+
+            <button type="button" class="apf-tab" data-tab="apf-category">
+                <span class="apf-tab-icon"><i class="bi bi-folder2-open"></i></span>
+                <span>Danh mục</span>
+            </button>
+
+            <button type="button" class="apf-tab" data-tab="apf-seo">
+                <span class="apf-tab-icon"><i class="bi bi-search"></i></span>
+                <span>SEO / Đường dẫn</span>
+            </button>
+
+            <button type="button" class="apf-tab" data-tab="apf-orders">
+                <span class="apf-tab-icon"><i class="bi bi-receipt"></i></span>
+                <span>Đơn hàng</span>
+            </button>
+        </aside>
+
+        <main class="apf-content">
+            <section id="apf-general" class="apf-panel active">
+                <div class="apf-section-head">
+                    <div>
+                        <h2>Tổng quan sản phẩm</h2>
+                        <p>Thông tin chính dùng để hiển thị sản phẩm ngoài giao diện cửa hàng.</p>
+                    </div>
+                </div>
+
+                @if (isEdit)
+                {
+                    <div class="apf-row">
+                        <label>ID</label>
+                        <div class="apf-static">@Model.Id</div>
+                    </div>
+
+                    <div class="apf-row">
+                        <label>Ngày tạo</label>
+                        <div class="apf-static">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+
+                    <div class="apf-row">
+                        <label>Cập nhật gần nhất</label>
+                        <div class="apf-static">
+                            @(Model.UpdatedAt.HasValue ? Model.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm") : "Chưa có")
+                        </div>
+                    </div>
+                }
+
+                <div class="apf-row">
+                    <label asp-for="IsActive">Trạng thái hiển thị</label>
+                    <div class="apf-inline">
+                        <label class="apf-switch">
+                            <input asp-for="IsActive" />
+                            <span></span>
+                        </label>
+                        <small>Bật để sản phẩm xuất hiện ngoài shop.</small>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="IsFeatured">Sản phẩm nổi bật</label>
+                    <div class="apf-inline">
+                        <label class="apf-switch">
+                            <input asp-for="IsFeatured" />
+                            <span></span>
+                        </label>
+                        <small>Dùng để ưu tiên hiển thị ở trang chủ hoặc danh sách sản phẩm.</small>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="ProductCode">Mã sản phẩm</label>
+                    <div>
+                        <input asp-for="ProductCode" class="apf-control" placeholder="Ví dụ: P-0001" />
+                        <span asp-validation-for="ProductCode" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="Name">Tên sản phẩm</label>
+                    <div>
+                        <input asp-for="Name" class="apf-control" placeholder="Ví dụ: iPhone 15" />
+                        <span asp-validation-for="Name" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="ShortDescription">Mô tả ngắn</label>
+                    <div>
+                        <input asp-for="ShortDescription" class="apf-control" placeholder="Mô tả ngắn hiển thị nhanh trên shop..." />
+                        <span asp-validation-for="ShortDescription" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row apf-row-top">
+                    <label asp-for="Description">Mô tả chi tiết</label>
+                    <div>
+                        <textarea asp-for="Description"
+                                  class="apf-control apf-textarea"
+                                  rows="7"
+                                  placeholder="Nhập mô tả chi tiết của sản phẩm..."></textarea>
+                        <span asp-validation-for="Description" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="DisplayOrder">Thứ tự hiển thị</label>
+                    <div>
+                        <input asp-for="DisplayOrder" class="apf-control" type="number" min="0" />
+                        <span asp-validation-for="DisplayOrder" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row apf-row-top">
+                    <label asp-for="AdminComment">Ghi chú quản trị</label>
+                    <div>
+                        <textarea asp-for="AdminComment"
+                                  class="apf-control apf-textarea small"
+                                  rows="4"
+                                  placeholder="Ghi chú nội bộ, không hiển thị ngoài shop..."></textarea>
+                        <span asp-validation-for="AdminComment" class="apf-error"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="apf-inventory" class="apf-panel">
+                <div class="apf-section-head">
+                    <div>
+                        <h2>Kho hàng</h2>
+                        <p>Quản lý tồn kho, cảnh báo sắp hết hàng và thời gian giao hàng.</p>
+                    </div>
+
+                    @if (isOutOfStock)
+                    {
+                        <span class="apf-state danger">Hết hàng</span>
+                    }
+                    else if (isLowStock)
+                    {
+                        <span class="apf-state warning">Sắp hết hàng</span>
+                    }
+                    else
+                    {
+                        <span class="apf-state success">Còn hàng</span>
+                    }
+                </div>
+
+                <div class="apf-info">
+                    Tồn kho được dùng khi khách thêm sản phẩm vào giỏ hàng. Nếu số lượng đặt vượt quá tồn kho, hệ thống giỏ hàng sẽ chặn hoặc báo lỗi.
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="StockQuantity">Số lượng tồn kho</label>
+                    <div>
+                        <input asp-for="StockQuantity" class="apf-control" type="number" min="0" />
+                        <span asp-validation-for="StockQuantity" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="LowStockThreshold">Ngưỡng cảnh báo</label>
+                    <div>
+                        <input asp-for="LowStockThreshold" class="apf-control" type="number" min="0" />
+                        <small class="apf-help">Nếu tồn kho nhỏ hơn hoặc bằng số này, báo cáo tồn kho sẽ xem là sắp hết hàng.</small>
+                        <span asp-validation-for="LowStockThreshold" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="DeliveryTime">Thời gian giao hàng</label>
+                    <div>
+                        <input asp-for="DeliveryTime" class="apf-control" placeholder="Ví dụ: 3 - 5 ngày" />
+                        <span asp-validation-for="DeliveryTime" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="AvailableStartDate">Ngày bắt đầu bán</label>
+                    <div>
+                        <input asp-for="AvailableStartDate" class="apf-control" type="datetime-local" />
+                        <span asp-validation-for="AvailableStartDate" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="AvailableEndDate">Ngày ngừng bán</label>
+                    <div>
+                        <input asp-for="AvailableEndDate" class="apf-control" type="datetime-local" />
+                        <span asp-validation-for="AvailableEndDate" class="apf-error"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="apf-price" class="apf-panel">
+                <div class="apf-section-head">
+                    <div>
+                        <h2>Giá bán</h2>
+                        <p>Thiết lập giá hiện tại, giá cũ và trạng thái giảm giá hiển thị ngoài shop.</p>
+                    </div>
+                </div>
+
+                <div class="apf-price-summary">
+                    <div>
+                        <span>Giá bán</span>
+                        <strong id="apfPricePreview">@Model.Price.ToString("N0") đ</strong>
+                    </div>
+
+                    <div>
+                        <span>Giá cũ</span>
+                        <strong id="apfOldPricePreview">
+                            @(Model.OldPrice.HasValue ? Model.OldPrice.Value.ToString("N0") + " đ" : "Chưa có")
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Giảm giá</span>
+                        <strong id="apfDiscountPreview">0%</strong>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="Price">Giá bán</label>
+                    <div>
+                        <div class="apf-money">
+                            <input asp-for="Price" class="apf-control" type="number" min="0" step="1000" id="Price" />
+                            <span>VND</span>
+                        </div>
+                        <span asp-validation-for="Price" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="OldPrice">Giá cũ</label>
+                    <div>
+                        <div class="apf-money">
+                            <input asp-for="OldPrice" class="apf-control" type="number" min="0" step="1000" id="OldPrice" />
+                            <span>VND</span>
+                        </div>
+                        <small class="apf-help">Nếu giá cũ lớn hơn giá bán, shop có thể hiển thị nhãn giảm giá.</small>
+                        <span asp-validation-for="OldPrice" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-info">
+                    Nếu bạn đã có chức năng “Quy tắc sản phẩm”, giảm giá tự động vẫn nên xử lý ở ProductRule. Phần này chỉ là giá gốc của sản phẩm.
+                </div>
+            </section>
+
+            <section id="apf-picture" class="apf-panel">
+                <div class="apf-section-head">
+                    <div>
+                        <h2>Hình ảnh sản phẩm</h2>
+                        <p>Thiết lập ảnh chính và thêm nhiều ảnh phụ để hiển thị ở trang chi tiết sản phẩm ngoài shop.</p>
+                    </div>
+                </div>
+
+                <div class="apf-picture-layout">
+                    <div class="apf-picture-preview">
+                        <img id="previewImage"
+                             src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? "/images/products/no-image.jpg" : Model.ImageUrl)"
+                             onerror="this.src='/images/products/no-image.jpg'"
+                             alt="Ảnh chính sản phẩm" />
+                    </div>
+
+                    <div class="apf-upload-panel">
+                        <h3>Ảnh chính</h3>
+                        <p>Ảnh này hiển thị ở danh sách sản phẩm, trang chủ, giỏ hàng và ảnh lớn mặc định ở trang chi tiết.</p>
+
+                        <input type="file"
+                               name="imageFile"
+                               id="imageFile"
+                               class="apf-file"
+                               accept=".jpg,.jpeg,.png,.webp" />
+
+                        <small>
+                            Nếu không chọn ảnh mới khi sửa sản phẩm, hệ thống sẽ giữ ảnh chính hiện tại.
+                        </small>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+                        {
+                            <div class="apf-current-path">
+                                <span>Ảnh chính hiện tại</span>
+                                <code>@Model.ImageUrl</code>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="apf-multi-upload">
+                    <div>
+                        <h3>Ảnh phụ / thư viện ảnh</h3>
+                        <p>Các ảnh này sẽ hiện thành danh sách ảnh nhỏ xếp dọc bên trái trong trang chi tiết sản phẩm.</p>
+                    </div>
+
+                    <input type="file"
+                           name="galleryImages"
+                           id="galleryImages"
+                           class="apf-file"
+                           accept=".jpg,.jpeg,.png,.webp"
+                           multiple />
+
+                    <small>
+                        Có thể chọn nhiều ảnh cùng lúc. Ảnh chính ở trên vẫn được giữ riêng, ảnh phụ sẽ lưu vào thư viện sản phẩm.
+                    </small>
+                </div>
+
+                @if (Model.ProductImages != null && Model.ProductImages.Any())
+                {
+                    <div class="apf-gallery">
+                        <div class="apf-gallery-head">
+                            <h3>Ảnh phụ hiện có</h3>
+                            <p>@Model.ProductImages.Count ảnh</p>
+                        </div>
+
+                        <div class="apf-gallery-grid">
+                            @foreach (var image in Model.ProductImages.OrderBy(x => x.DisplayOrder).ThenBy(x => x.Id))
+                            {
+                                <div class="apf-gallery-item">
+                                    <div class="apf-gallery-image">
+                                        <img src="@image.ImageUrl"
+                                             onerror="this.src='/images/products/no-image.jpg'"
+                                             alt="Ảnh phụ sản phẩm" />
+                                    </div>
+
+                                    <div class="apf-gallery-actions">
+                                        <button type="button"
+                                                class="apf-gallery-btn js-product-image-action"
+                                                data-url="@Url.Action("SetMainProductImage", "Product", new { area = "Admin", id = image.Id })">
+                                            Đặt làm ảnh chính
+                                        </button>
+
+                                        <button type="button"
+                                                class="apf-gallery-btn danger js-product-image-action"
+                                                data-url="@Url.Action("DeleteProductImage", "Product", new { area = "Admin", id = image.Id })"
+                                                data-confirm="Bạn có chắc muốn xóa ảnh này không?">
+                                            Xóa
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="apf-empty">
+                        Chưa có ảnh phụ. Hãy chọn nhiều ảnh ở phần “Ảnh phụ / thư viện ảnh” rồi bấm lưu.
+                    </div>
+                }
+            </section>
+
+            <section id="apf-category" class="apf-panel">
+                <div class="apf-section-head">
+                    <div>
+                        <h2>Danh mục</h2>
+                        <p>Danh mục quyết định sản phẩm hiển thị ở menu, trang danh mục và bộ lọc ngoài shop.</p>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="CategoryId">Danh mục chính</label>
+                    <div>
+                        <select asp-for="CategoryId" class="apf-control" asp-items="ViewBag.Categories">
+                            <option value="">-- Chọn danh mục --</option>
+                        </select>
+                        <span asp-validation-for="CategoryId" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-info">
+                    Nếu sản phẩm không xuất hiện ngoài shop, hãy kiểm tra cả 2 điều kiện: sản phẩm đang hiển thị và danh mục của sản phẩm cũng đang hiển thị.
+                </div>
+            </section>
+
+            <section id="apf-seo" class="apf-panel">
+                <div class="apf-section-head">
+                    <div>
+                        <h2>SEO / Đường dẫn</h2>
+                        <p>Quản lý alias và nội dung hỗ trợ công cụ tìm kiếm.</p>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="Alias">URL alias</label>
+                    <div>
+                        <input asp-for="Alias" class="apf-control" placeholder="Ví dụ: iphone-15" />
+                        <small class="apf-help">Nếu bỏ trống, hệ thống sẽ tự tạo từ tên sản phẩm.</small>
+                        <span asp-validation-for="Alias" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="SeoTitle">Tiêu đề SEO</label>
+                    <div>
+                        <input asp-for="SeoTitle" class="apf-control" placeholder="Tiêu đề hiển thị trên công cụ tìm kiếm..." />
+                        <span asp-validation-for="SeoTitle" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row apf-row-top">
+                    <label asp-for="SeoDescription">Mô tả SEO</label>
+                    <div>
+                        <textarea asp-for="SeoDescription"
+                                  class="apf-control apf-textarea small"
+                                  rows="4"
+                                  placeholder="Mô tả ngắn cho công cụ tìm kiếm..."></textarea>
+                        <span asp-validation-for="SeoDescription" class="apf-error"></span>
+                    </div>
+                </div>
+
+                <div class="apf-row">
+                    <label asp-for="SeoKeywords">Từ khóa SEO</label>
+                    <div>
+                        <input asp-for="SeoKeywords" class="apf-control" placeholder="Ví dụ: iphone, điện thoại, smartphone" />
+                        <span asp-validation-for="SeoKeywords" class="apf-error"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="apf-orders" class="apf-panel">
+                <div class="apf-section-head">
+                    <div>
+                        <h2>Đơn hàng liên quan</h2>
+                        <p>Xem nhanh các đơn hàng có chứa sản phẩm này.</p>
+                    </div>
+                </div>
+
+                @if (!isEdit)
+                {
+                    <div class="apf-info">
+                        Sau khi tạo sản phẩm, tab đơn hàng sẽ hiển thị các đơn có chứa sản phẩm này.
+                    </div>
+                }
+                else if (!productOrders.Any())
+                {
+                    <div class="apf-empty">
+                        Chưa có đơn hàng nào chứa sản phẩm này.
+                    </div>
+                }
+                else
+                {
+                    <div class="apf-table-wrap">
+                        <table class="apf-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã đơn</th>
+                                    <th>Ngày đặt</th>
+                                    <th>Số lượng</th>
+                                    <th>Giá tại thời điểm mua</th>
+                                    <th>Tổng</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in productOrders)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>#@item.OrderId</strong>
+                                            <div class="apf-muted">@item.Order?.OrderCode</div>
+                                        </td>
+                                        <td>@(item.Order != null ? item.Order.CreatedAt.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                                        <td>@item.Quantity</td>
+                                        <td>@item.UnitPrice.ToString("N0") đ</td>
+                                        <td>@item.TotalPrice.ToString("N0") đ</td>
+                                        <td class="text-end">
+                                            <a asp-area="Admin"
+                                               asp-controller="Order"
+                                               asp-action="Details"
+                                               asp-route-id="@item.OrderId"
+                                               class="apf-link-btn">
+                                                Xem đơn
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </main>
+    </div>
+</form>

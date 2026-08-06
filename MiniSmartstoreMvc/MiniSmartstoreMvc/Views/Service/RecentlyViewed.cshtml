@@ -1,0 +1,40 @@
+﻿@model List<MiniSmartstoreMvc.Models.Product>
+
+@{
+    ViewData["Title"] = "Recently viewed products";
+}
+
+<div class="shop-service-page">
+    <section class="shop-service-hero">
+        <span>MiniSmartstore</span>
+        <h1>Recently viewed products</h1>
+        <p>Danh sách những sản phẩm bạn vừa xem gần đây trên cửa hàng.</p>
+    </section>
+
+    <section class="shop-service-section">
+        <div class="shop-service-section-head">
+            <div>
+                <h2>Sản phẩm đã xem gần đây</h2>
+                <p>Dữ liệu được lưu tạm trên trình duyệt trong 30 ngày.</p>
+            </div>
+
+            <a asp-controller="Product" asp-action="Index">Tiếp tục mua sắm</a>
+        </div>
+
+        @if (Model.Any())
+        {
+            <div class="shop-service-product-grid">
+                @foreach (var product in Model)
+                {
+                    <partial name="_ServiceProductCard" model="product" />
+                }
+            </div>
+        }
+        else
+        {
+            <div class="shop-service-empty">
+                Bạn chưa xem sản phẩm nào gần đây.
+            </div>
+        }
+    </section>
+</div>

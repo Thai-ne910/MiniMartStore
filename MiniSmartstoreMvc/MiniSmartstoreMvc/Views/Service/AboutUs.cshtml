@@ -1,0 +1,51 @@
+﻿@{
+    ViewData["Title"] = "About us";
+}
+
+<div class="shop-service-page">
+    <section class="shop-service-hero about">
+        <span>About MiniSmartstore</span>
+        <h1>About us</h1>
+        <p>MiniSmartstore là website thương mại điện tử mini được xây dựng bằng ASP.NET Core MVC, hỗ trợ quản lý sản phẩm, giỏ hàng, yêu thích, so sánh và đặt hàng.</p>
+    </section>
+
+    <section class="shop-about-grid">
+        <div class="shop-about-card">
+            <h2>Chúng tôi làm gì?</h2>
+            <p>
+                MiniSmartstore tập trung vào trải nghiệm mua sắm đơn giản, dễ sử dụng và phù hợp với một dự án thương mại điện tử quy mô nhỏ.
+                Người dùng có thể xem sản phẩm, lọc danh mục, thêm vào giỏ hàng, lưu yêu thích, so sánh và đặt hàng.
+            </p>
+        </div>
+
+        <div class="shop-about-card">
+            <h2>Mục tiêu dự án</h2>
+            <p>
+                Dự án được xây dựng để mô phỏng các chức năng quan trọng của một website bán hàng thực tế:
+                quản lý sản phẩm, danh mục, đơn hàng, khách hàng, tồn kho, báo cáo và giao diện quản trị.
+            </p>
+        </div>
+
+        <div class="shop-about-card">
+            <h2>Công nghệ sử dụng</h2>
+            <ul>
+                <li>ASP.NET Core MVC</li>
+                <li>Entity Framework Core</li>
+                <li>SQL Server</li>
+                <li>Identity Authentication</li>
+                <li>HTML, CSS, JavaScript</li>
+            </ul>
+        </div>
+
+        <div class="shop-about-card">
+            <h2>Liên hệ</h2>
+            <p>
+                Cần hỗ trợ hoặc góp ý cho cửa hàng? Hãy gửi thông tin qua trang liên hệ.
+            </p>
+
+            <a asp-controller="Contact" asp-action="Index" class="shop-about-btn">
+                Contact us
+            </a>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,39 @@
+﻿@model MiniSmartstoreMvc.Models.Order
+
+@{
+    ViewData["Title"] = "Đặt hàng thành công";
+}
+
+<div class="container checkout-smart-page">
+    <partial name="_CheckoutProgress" model="6" />
+
+    <div class="checkout-completed-box">
+        <div class="checkout-completed-icon">✓</div>
+
+        <h1>Đơn hàng của bạn đã được ghi nhận</h1>
+
+        <p>Cảm ơn bạn đã mua hàng tại MiniSmartstore.</p>
+
+        <div class="checkout-order-number">
+            Mã đơn hàng:
+            <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.Id">
+                @Model.OrderCode
+            </a>
+        </div>
+
+        <div class="checkout-completed-actions">
+            <a asp-controller="Order"
+               asp-action="Details"
+               asp-route-id="@Model.Id"
+               class="checkout-orange-btn">
+                Xem chi tiết đơn hàng
+            </a>
+
+            <a asp-controller="Product"
+               asp-action="Index"
+               class="btn btn-light">
+                Tiếp tục mua sắm
+            </a>
+        </div>
+    </div>
+</div>

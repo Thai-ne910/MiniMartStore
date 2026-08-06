@@ -1,0 +1,60 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminCustomerFormViewModel
+
+@{
+    ViewData["Title"] = "Thêm khách hàng";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin/admin-customer.css" asp-append-version="true" />
+}
+
+<div class="admin-customer-page">
+    <div class="admin-customer-card admin-customer-edit-card">
+        <form asp-area="Admin" asp-controller="Customer" asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="admin-customer-form-header">
+                <div class="admin-customer-form-title">
+                    <a asp-area="Admin"
+                       asp-controller="Customer"
+                       asp-action="List"
+                       class="admin-customer-back">
+                        ←
+                    </a>
+
+                    <h1>Thêm khách hàng</h1>
+                </div>
+
+                <div class="admin-customer-actions">
+                    <button type="submit" class="admin-customer-primary-btn">
+                        Lưu
+                    </button>
+
+                    <button type="submit"
+                            name="saveContinue"
+                            value="true"
+                            class="admin-customer-btn">
+                        Lưu và tiếp tục sửa
+                    </button>
+                </div>
+            </div>
+
+            <div class="admin-customer-form-layout">
+                <aside class="admin-customer-tabs">
+                    <button type="button" class="admin-customer-tab active">
+                        <span class="customer-tab-icon customer-icon-user"></span>
+                        <span>Tổng quan</span>
+                    </button>
+                </aside>
+
+                <section>
+                    <partial name="_Form" model="Model" />
+                </section>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,151 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminCustomerReportViewModel
+
+@{
+    ViewData["Title"] = "Báo cáo khách hàng";
+}
+
+<div class="admin-report-page">
+    <div class="admin-report-shell">
+        <div class="admin-report-header">
+            <div class="admin-report-title">
+                <h1>Báo cáo khách hàng</h1>
+                <p>Thống kê khách hàng mua nhiều theo số đơn hoặc theo tổng tiền mua.</p>
+            </div>
+
+            <div class="admin-report-tabs">
+                <a asp-area="Admin" asp-controller="Report" asp-action="Index">Tổng quan</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Sales">Doanh thu</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Products">Sản phẩm</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Customers" class="active">Khách hàng</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory">Tồn kho</a>
+            </div>
+        </div>
+
+        <form method="get" class="admin-report-filter">
+            <div class="admin-report-field">
+                <label>Từ ngày</label>
+                <input type="date" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="admin-report-control" />
+            </div>
+
+            <div class="admin-report-field">
+                <label>Đến ngày</label>
+                <input type="date" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="admin-report-control" />
+            </div>
+
+            <div class="admin-report-switch">
+                <a asp-area="Admin"
+                   asp-controller="Report"
+                   asp-action="Customers"
+                   asp-route-sortBy="orders"
+                   asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                   asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                   class="@(Model.SortBy == "orders" ? "active" : "")">
+                    Theo số đơn
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Report"
+                   asp-action="Customers"
+                   asp-route-sortBy="amount"
+                   asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                   asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                   class="@(Model.SortBy == "amount" ? "active" : "")">
+                    Theo tổng tiền
+                </a>
+            </div>
+
+            <input type="hidden" name="sortBy" value="@Model.SortBy" />
+
+            <button type="submit" class="admin-report-primary-btn">Lọc báo cáo</button>
+
+            <a asp-area="Admin" asp-controller="Report" asp-action="Customers" class="admin-report-secondary-btn">
+                Đặt lại
+            </a>
+        </form>
+
+        <div class="admin-report-body">
+            <div class="admin-report-stats">
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tổng khách hàng</div>
+                    <div class="admin-report-stat-value">@Model.TotalCustomers</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Đã mua hàng</div>
+                    <div class="admin-report-stat-value">@Model.CustomersWithOrders</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Chưa mua hàng</div>
+                    <div class="admin-report-stat-value">@Model.CustomersWithoutOrders</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tổng tiền mua</div>
+                    <div class="admin-report-stat-value">@Model.TotalRevenue.ToString("N0") đ</div>
+                </div>
+            </div>
+
+            <div class="admin-report-card">
+                <div class="admin-report-card-header">
+                    <div>
+                        <h2>Danh sách khách hàng</h2>
+                        <p>Sắp xếp theo @(Model.SortBy == "orders" ? "số đơn hàng" : "tổng tiền mua").</p>
+                    </div>
+                </div>
+
+                <div class="admin-report-table-wrap">
+                    <table class="admin-report-table">
+                        <thead>
+                            <tr>
+                                <th>Khách hàng</th>
+                                <th>Email</th>
+                                <th>Số đơn</th>
+                                <th>Tổng tiền mua</th>
+                                <th>Đơn gần nhất</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Any())
+                            {
+                                foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-area="Admin" asp-controller="Customer" asp-action="Edit" asp-route-id="@item.UserId" class="admin-report-link">
+                                                @item.CustomerName
+                                            </a>
+                                        </td>
+                                        <td>@item.Email</td>
+                                        <td><span class="admin-report-badge">@item.OrderCount</span></td>
+                                        <td class="admin-report-money">@item.TotalSpent.ToString("N0") đ</td>
+                                        <td>
+                                            @(item.LastOrderAt.HasValue ? item.LastOrderAt.Value.ToString("dd/MM/yyyy HH:mm") : "Chưa có")
+                                        </td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="admin-report-pill success">Đang hoạt động</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="admin-report-pill hidden">Đã khóa</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="admin-report-empty">Chưa có khách hàng nào phát sinh đơn hàng.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

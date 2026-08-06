@@ -1,0 +1,142 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminInventoryReportViewModel
+
+@{
+    ViewData["Title"] = "Báo cáo tồn kho";
+}
+
+<div class="admin-report-page">
+    <div class="admin-report-shell">
+        <div class="admin-report-header">
+            <div class="admin-report-title">
+                <h1>Báo cáo tồn kho</h1>
+                <p>Theo dõi sản phẩm hết hàng, sắp hết hàng, tồn kho nhiều và sản phẩm đang ẩn.</p>
+            </div>
+
+            <div class="admin-report-tabs">
+                <a asp-area="Admin" asp-controller="Report" asp-action="Index">Tổng quan</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Sales">Doanh thu</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Products">Sản phẩm</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Customers">Khách hàng</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory" class="active">Tồn kho</a>
+            </div>
+        </div>
+
+        <div class="admin-report-filter">
+            <div class="admin-report-switch">
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory" asp-route-stockFilter="all" class="@(Model.StockFilter == "all" ? "active" : "")">
+                    Tất cả
+                </a>
+
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory" asp-route-stockFilter="out" class="@(Model.StockFilter == "out" ? "active" : "")">
+                    Hết hàng
+                </a>
+
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory" asp-route-stockFilter="low" class="@(Model.StockFilter == "low" ? "active" : "")">
+                    Sắp hết hàng
+                </a>
+
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory" asp-route-stockFilter="high" class="@(Model.StockFilter == "high" ? "active" : "")">
+                    Tồn kho nhiều
+                </a>
+
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory" asp-route-stockFilter="hidden" class="@(Model.StockFilter == "hidden" ? "active" : "")">
+                    Đang ẩn
+                </a>
+            </div>
+        </div>
+
+        <div class="admin-report-body">
+            <div class="admin-report-stats">
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tổng sản phẩm</div>
+                    <div class="admin-report-stat-value">@Model.TotalProducts</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Hết hàng</div>
+                    <div class="admin-report-stat-value">@Model.OutOfStockCount</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Sắp hết hàng</div>
+                    <div class="admin-report-stat-value">@Model.LowStockCount</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tồn kho nhiều</div>
+                    <div class="admin-report-stat-value">@Model.HighStockCount</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Đang ẩn</div>
+                    <div class="admin-report-stat-value">@Model.HiddenProductCount</div>
+                </div>
+            </div>
+
+            <div class="admin-report-card">
+                <div class="admin-report-card-header">
+                    <div>
+                        <h2>Danh sách tồn kho</h2>
+                        <p>Hết hàng: tồn kho bằng 0. Sắp hết hàng: từ 1 đến 5. Tồn kho nhiều: từ 100 trở lên.</p>
+                    </div>
+                </div>
+
+                <div class="admin-report-table-wrap">
+                    <table class="admin-report-table">
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>Danh mục</th>
+                                <th>Tồn kho</th>
+                                <th>Giá bán</th>
+                                <th>Đã bán</th>
+                                <th>Hiển thị</th>
+                                <th>Cảnh báo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Any())
+                            {
+                                foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.ProductId" class="admin-report-link">
+                                                @item.ProductName
+                                            </a>
+                                        </td>
+                                        <td>@item.CategoryName</td>
+                                        <td><span class="admin-report-badge">@item.StockQuantity</span></td>
+                                        <td class="admin-report-money">@item.Price.ToString("N0") đ</td>
+                                        <td><span class="admin-report-badge">@item.SoldQuantity</span></td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="admin-report-pill success">Đang hiển thị</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="admin-report-pill hidden">Đang ẩn</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="admin-report-pill @item.WarningType">
+                                                @item.WarningText
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="admin-report-empty">Không có sản phẩm phù hợp với bộ lọc.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,144 @@
+﻿@model MiniSmartstoreMvc.ViewModels.CheckoutAddressViewModel
+
+@{
+    ViewData["Title"] = "Địa chỉ nhận hàng";
+}
+
+<div class="container checkout-smart-page">
+    <partial name="_CheckoutProgress" model="2" />
+
+    <h1 class="checkout-main-title">Địa chỉ nhận hàng</h1>
+
+    <div class="checkout-section-title">
+        <span>CHỌN ĐỊA CHỈ NHẬN HÀNG</span>
+        <i></i>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="checkout-address-select-grid">
+        @if (Model.HasSavedAddress)
+        {
+            <form asp-action="BillingAddress" method="post" class="checkout-saved-address-card">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="addressMode" value="saved" />
+
+                <input type="hidden" asp-for="SavedCustomerName" />
+                <input type="hidden" asp-for="SavedEmail" />
+                <input type="hidden" asp-for="SavedPhoneNumber" />
+                <input type="hidden" asp-for="SavedShippingAddress" />
+
+                <button type="submit" class="checkout-address-use-btn">
+                    Giao tới địa chỉ này <span>›</span>
+                </button>
+
+                <div class="checkout-saved-address-body">
+                    <h4>@Model.SavedCustomerName</h4>
+
+                    <p>
+                        <strong>Số điện thoại:</strong>
+                        @Model.SavedPhoneNumber
+                    </p>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.SavedEmail))
+                    {
+                        <p>@Model.SavedEmail</p>
+                    }
+
+                    <p>@Model.SavedShippingAddress</p>
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="checkout-no-address-card">
+                <div class="checkout-no-address-icon">⌂</div>
+
+                <h4>Bạn chưa có địa chỉ nhận hàng</h4>
+
+                <p>Vui lòng thêm địa chỉ mới để tiếp tục thanh toán.</p>
+            </div>
+        }
+
+        <div class="checkout-new-address-box">
+            <div class="checkout-or-text">HOẶC</div>
+
+            <div class="checkout-big-plus">+</div>
+
+            <button type="button"
+                    class="checkout-add-address-btn"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#checkoutNewAddressForm"
+                    aria-expanded="@(!Model.HasSavedAddress || Model.UseNewAddress).ToString().ToLower()">
+                Thêm địa chỉ mới <span>›</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse @((!Model.HasSavedAddress || Model.UseNewAddress) ? "show" : "") mt-4"
+         id="checkoutNewAddressForm">
+
+        <form asp-action="BillingAddress" method="post" class="checkout-address-form-card">
+            @Html.AntiForgeryToken()
+
+            <input type="hidden" name="addressMode" value="new" />
+
+            <input type="hidden" asp-for="HasSavedAddress" />
+            <input type="hidden" asp-for="SavedCustomerName" />
+            <input type="hidden" asp-for="SavedEmail" />
+            <input type="hidden" asp-for="SavedPhoneNumber" />
+            <input type="hidden" asp-for="SavedShippingAddress" />
+
+            <div class="checkout-section-title">
+                <span>THÊM ĐỊA CHỈ</span>
+                <i></i>
+            </div>
+
+            <div class="checkout-address-form-row">
+                <label>Họ tên người nhận *</label>
+
+                <div>
+                    <input asp-for="CustomerName"
+                           class="form-control"
+                           placeholder="Nhập họ tên người nhận" />
+
+                    <span asp-validation-for="CustomerName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="checkout-address-form-row">
+                <label>Số điện thoại *</label>
+
+                <div>
+                    <input asp-for="PhoneNumber"
+                           class="form-control"
+                           placeholder="Nhập số điện thoại" />
+
+                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="checkout-address-form-row">
+                <label>Địa chỉ nhận hàng *</label>
+
+                <div>
+                    <textarea asp-for="ShippingAddress"
+                              class="form-control"
+                              rows="4"
+                              placeholder="Nhập địa chỉ nhận hàng"></textarea>
+
+                    <span asp-validation-for="ShippingAddress" class="text-danger"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="checkout-save-new-address-btn">
+                Lưu và tiếp tục <span>›</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

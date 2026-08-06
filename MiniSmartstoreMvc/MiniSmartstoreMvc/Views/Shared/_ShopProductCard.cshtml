@@ -1,0 +1,186 @@
+﻿@model MiniSmartstoreMvc.Models.Product
+
+@{
+    var discountPercent = 0;
+
+    if (Model.OldPrice != null && Model.OldPrice > Model.Price)
+    {
+        discountPercent = (int)Math.Round((1 - Model.Price / Model.OldPrice.Value) * 100);
+    }
+
+    var description = string.IsNullOrWhiteSpace(Model.Description)
+        ? "Chưa có mô tả sản phẩm."
+        : Model.Description;
+
+    var shortDescription = description.Length > 95
+        ? description.Substring(0, 95) + "..."
+        : description;
+}
+
+<div class="shop-product-card product-hover-card">
+    <a asp-controller="Product"
+       asp-action="Details"
+       asp-route-id="@Model.Id"
+       class="shop-product-image-link">
+        <img src="@Model.ImageUrl"
+             alt="@Model.Name"
+             onerror="this.src='/images/products/no-image.jpg'" />
+
+        @if (discountPercent > 0)
+        {
+            <span class="discount-badge">-@discountPercent%</span>
+        }
+
+        @if (Model.IsFeatured)
+        {
+            <span class="deal-badge">Nổi bật</span>
+        }
+    </a>
+
+    <div class="shop-product-info">
+        <div class="shop-product-category">
+            @(Model.Category?.Name ?? "Chưa có danh mục")
+        </div>
+
+        <a asp-controller="Product"
+           asp-action="Details"
+           asp-route-id="@Model.Id"
+           class="shop-product-name">
+            @Model.Name
+        </a>
+
+        <div class="shop-product-desc">
+            @shortDescription
+        </div>
+
+        <div class="shop-product-delivery">
+            <span></span>
+            Giao hàng 3 - 5 ngày
+        </div>
+
+        <div class="shop-product-price-box">
+            <strong>@Model.Price.ToString("N0") đ</strong>
+
+            @if (Model.OldPrice != null && Model.OldPrice > Model.Price)
+            {
+                <small>Giá cũ: @Model.OldPrice.Value.ToString("N0") đ</small>
+            }
+        </div>
+
+        @if (Model.ProductColors != null && Model.ProductColors.Any())
+        {
+            <div class="shop-product-colors">
+                @foreach (var color in Model.ProductColors.Take(5))
+                {
+                    <span title="@color.ColorName"
+                          style="background:@color.ColorCode"></span>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="shop-product-actions">
+        <button type="button"
+                class="shop-product-action-btn main js-drawer-add-cart"
+                data-product-id="@Model.Id"
+                title="Thêm vào giỏ hàng">
+            🛒
+        </button>
+
+        <button type="button"
+                class="shop-product-action-btn js-add-wishlist"
+                data-product-id="@Model.Id"
+                title="Thêm vào yêu thích">
+            ♡
+        </button>
+
+        <button type="button"
+                class="shop-product-action-btn js-add-compare"
+                data-product-id="@Model.Id"
+                title="Thêm vào so sánh">
+            ⇄
+        </button>
+
+        <a asp-controller="Product"
+           asp-action="Details"
+           asp-route-id="@Model.Id"
+           class="shop-product-action-btn"
+           title="Xem chi tiết">
+            i
+        </a>
+    </div>
+
+    <div class="product-hover-preview">
+        <div class="preview-top">
+            <img src="@Model.ImageUrl"
+                 alt="@Model.Name"
+                 onerror="this.src='/images/products/no-image.jpg'" />
+
+            <div>
+                <div class="preview-category">
+                    @(Model.Category?.Name ?? "Sản phẩm")
+                </div>
+
+                <a asp-controller="Product"
+                   asp-action="Details"
+                   asp-route-id="@Model.Id"
+                   class="preview-name">
+                    @Model.Name
+                </a>
+
+                <div class="preview-price">
+                    @Model.Price.ToString("N0") đ
+                </div>
+
+                @if (Model.OldPrice != null && Model.OldPrice > Model.Price)
+                {
+                    <div class="preview-old-price">
+                        @Model.OldPrice.Value.ToString("N0") đ
+                    </div>
+                }
+            </div>
+        </div>
+
+        <p class="preview-desc">
+            @shortDescription
+        </p>
+
+        @if (Model.ProductColors != null && Model.ProductColors.Any())
+        {
+            <div class="preview-colors">
+                @foreach (var color in Model.ProductColors.Take(6))
+                {
+                    <span title="@color.ColorName"
+                          style="background:@color.ColorCode"></span>
+                }
+            </div>
+        }
+
+        <div class="preview-actions">
+            <button type="button"
+                    class="preview-action-btn main js-drawer-add-cart"
+                    data-product-id="@Model.Id">
+                🛒 Thêm giỏ
+            </button>
+
+            <button type="button"
+                    class="preview-action-btn js-add-wishlist"
+                    data-product-id="@Model.Id">
+                ♡
+            </button>
+
+            <button type="button"
+                    class="preview-action-btn js-add-compare"
+                    data-product-id="@Model.Id">
+                ⇄
+            </button>
+
+            <a asp-controller="Product"
+               asp-action="Details"
+               asp-route-id="@Model.Id"
+               class="preview-action-btn">
+                i
+            </a>
+        </div>
+    </div>
+</div>

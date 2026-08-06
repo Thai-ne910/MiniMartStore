@@ -1,0 +1,19 @@
+﻿@model int
+
+<button type="button"
+        class="basket-link drawer-open-btn"
+        data-drawer-tab="cart"
+        title="Giỏ hàng">
+    <span class="basket-icon-wrap">
+        🛒
+        @if (Model > 0)
+        {
+            <span class="basket-badge">@Model</span>
+        }
+    </span>
+
+    <span class="basket-text">
+        <small>Giỏ hàng</small>
+        <strong>Của bạn</strong>
+    </span>
+</button>

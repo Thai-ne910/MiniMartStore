@@ -1,0 +1,69 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using MiniSmartstoreMvc.Models
+
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+
+    var user = await UserManager.GetUserAsync(User);
+
+    var displayName = !string.IsNullOrWhiteSpace(user?.FullName)
+        ? user.FullName
+        : user?.Email ?? User.Identity?.Name ?? "Khách hàng";
+
+    var email = user?.Email ?? User.Identity?.Name ?? "";
+
+    var firstLetter = !string.IsNullOrWhiteSpace(displayName)
+        ? displayName.Substring(0, 1).ToUpper()
+        : "U";
+
+    string Active(string targetController, string targetAction)
+    {
+        return controller == targetController && action == targetAction ? "active" : "";
+    }
+}
+
+<aside class="smart-account-sidebar">
+    <div class="smart-account-user-card">
+        <div class="smart-account-avatar">
+            @firstLetter
+        </div>
+
+        <div class="smart-account-user-info">
+            <strong>@displayName</strong>
+            <span>Khách hàng từ Jul 2026</span>
+        </div>
+    </div>
+
+    <nav class="smart-account-menu">
+        <a asp-controller="Customer"
+           asp-action="Info"
+           class="@Active("Customer", "Info")">
+            <span class="menu-icon">👤</span>
+            <span>Thông tin tài khoản</span>
+        </a>
+
+        <a asp-controller="Customer"
+           asp-action="Addresses"
+           class="@Active("Customer", "Addresses")">
+            <span class="menu-icon">▣</span>
+            <span>Địa chỉ nhận hàng</span>
+        </a>
+
+        <a asp-controller="Order"
+           asp-action="Index"
+           class="@Active("Order", "Index")">
+            <span class="menu-icon">📄</span>
+            <span>Đơn hàng</span>
+        </a>
+
+        <a asp-controller="Customer"
+           asp-action="ChangePassword"
+           class="@Active("Customer", "ChangePassword")">
+            <span class="menu-icon">🔒</span>
+            <span>Đổi mật khẩu</span>
+        </a>
+    </nav>
+</aside>

@@ -1,0 +1,233 @@
+﻿@using MiniSmartstoreMvc.Models
+@model ProductRule
+
+@{
+    ViewData["Title"] = "Thêm quy tắc sản phẩm";
+}
+
+<div class="admin-product-page">
+    <div class="admin-product-title-row">
+        <div>
+            <h2>Thêm quy tắc sản phẩm</h2>
+            <p class="text-muted mb-0">
+                Tạo quy tắc tự động áp dụng cho sản phẩm theo thời gian.
+            </p>
+        </div>
+
+        <a asp-area="Admin"
+           asp-controller="ProductRule"
+           asp-action="Index"
+           class="btn btn-outline-secondary">
+            Quay lại
+        </a>
+    </div>
+
+    <form asp-area="Admin" asp-controller="ProductRule" asp-action="Create" method="post" class="admin-rule-form">
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="admin-card mb-4">
+                    <div class="admin-card-header">
+                        <h5>Thông tin quy tắc</h5>
+                    </div>
+
+                    <div class="admin-card-body">
+                        <div class="mb-3">
+                            <label asp-for="RuleName" class="form-label">Tên quy tắc</label>
+                            <input asp-for="RuleName" class="form-control" placeholder="Ví dụ: Sale 30/4 toàn bộ sản phẩm" />
+                            <span asp-validation-for="RuleName" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Mô tả</label>
+                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ActionType" class="form-label">Loại quy tắc</label>
+                            <select asp-for="ActionType" class="form-select" id="actionTypeSelect">
+                                <option value="1">Giảm giá</option>
+                                <option value="2">Đánh dấu sản phẩm nổi bật</option>
+                                <option value="3">Ẩn sản phẩm</option>
+                                <option value="4">Hiện sản phẩm</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="TargetType" class="form-label">Áp dụng cho</label>
+                            <select asp-for="TargetType" class="form-select" id="targetTypeSelect">
+                                <option value="1">Toàn bộ sản phẩm</option>
+                                <option value="2">Theo danh mục</option>
+                                <option value="3">Một sản phẩm cụ thể</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 rule-category-box">
+                            <label asp-for="CategoryId" class="form-label">Danh mục</label>
+                            <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories">
+                                <option value="">-- Chọn danh mục --</option>
+                            </select>
+                            <span asp-validation-for="CategoryId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3 rule-product-box">
+                            <label asp-for="ProductId" class="form-label">Sản phẩm</label>
+                            <select asp-for="ProductId" class="form-select" asp-items="ViewBag.Products">
+                                <option value="">-- Chọn sản phẩm --</option>
+                            </select>
+                            <span asp-validation-for="ProductId" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-card mb-4 discount-rule-box">
+                    <div class="admin-card-header">
+                        <h5>Thiết lập giảm giá</h5>
+                    </div>
+
+                    <div class="admin-card-body">
+                        <div class="mb-3">
+                            <label asp-for="DiscountType" class="form-label">Kiểu giảm giá</label>
+                            <select asp-for="DiscountType" class="form-select" id="discountTypeSelect">
+                                <option value="1">Giảm số tiền cố định</option>
+                                <option value="2">Giảm theo phần trăm</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DiscountValue" class="form-label" id="discountValueLabel">
+                                Giá trị giảm
+                            </label>
+
+                            <input asp-for="DiscountValue"
+                                   class="form-control"
+                                   type="number"
+                                   min="0"
+                                   step="1"
+                                   id="discountValueInput"
+                                   placeholder="Nhập giá trị giảm" />
+
+                            <small class="text-muted" id="discountValueHint">
+                                Nếu chọn giảm theo phần trăm, nhập ví dụ: 10 nghĩa là giảm 10%.
+                            </small>
+
+                            <span asp-validation-for="DiscountValue" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h5>Thời gian áp dụng</h5>
+                    </div>
+
+                    <div class="admin-card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="StartDate" class="form-label">Ngày bắt đầu</label>
+                                <input asp-for="StartDate" class="form-control" type="datetime-local" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="EndDate" class="form-label">Ngày kết thúc</label>
+                                <input asp-for="EndDate" class="form-control" type="datetime-local" />
+                                <span asp-validation-for="EndDate" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Priority" class="form-label">Độ ưu tiên</label>
+                            <input asp-for="Priority" class="form-control" type="number" min="1" />
+                        </div>
+
+                        <div class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label">Bật quy tắc</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="admin-card sticky-top" style="top: 20px;">
+                    <div class="admin-card-header">
+                        <h5>Lưu quy tắc</h5>
+                    </div>
+
+                    <div class="admin-card-body">
+                        <p class="text-muted">
+                            Sau khi lưu, hệ thống sẽ tự áp dụng quy tắc cho các sản phẩm phù hợp.
+                        </p>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-2">
+                            Lưu quy tắc
+                        </button>
+
+                        <a asp-area="Admin"
+                           asp-controller="ProductRule"
+                           asp-action="Index"
+                           class="btn btn-outline-secondary w-100">
+                            Hủy
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        function updateRuleForm() {
+            const actionType = document.getElementById("actionTypeSelect").value;
+            const targetType = document.getElementById("targetTypeSelect").value;
+            const discountType = document.getElementById("discountTypeSelect")?.value;
+
+            const discountBox = document.querySelector(".discount-rule-box");
+            const categoryBox = document.querySelector(".rule-category-box");
+            const productBox = document.querySelector(".rule-product-box");
+
+            if (discountBox) {
+                discountBox.style.display = actionType === "1" ? "block" : "none";
+            }
+
+            if (categoryBox) {
+                categoryBox.style.display = targetType === "2" ? "block" : "none";
+            }
+
+            if (productBox) {
+                productBox.style.display = targetType === "3" ? "block" : "none";
+            }
+
+            const discountInput = document.getElementById("discountValueInput");
+            const discountHint = document.getElementById("discountValueHint");
+
+            if (discountInput && discountHint) {
+                if (discountType === "2") {
+                    discountInput.step = "1";
+                    discountInput.min = "0";
+                    discountInput.max = "100";
+                    discountInput.placeholder = "Ví dụ: 10 nghĩa là giảm 10%";
+                    discountHint.textContent = "Giảm theo phần trăm: nhập 1, 2, 5, 10... tối đa 100.";
+                } else {
+                    discountInput.step = "1000";
+                    discountInput.min = "0";
+                    discountInput.removeAttribute("max");
+                    discountInput.placeholder = "Ví dụ: 50000 nghĩa là giảm 50.000đ";
+                    discountHint.textContent = "Giảm số tiền cố định: nhập số tiền giảm, ví dụ 50000.";
+                }
+            }
+        }
+
+        document.getElementById("actionTypeSelect").addEventListener("change", updateRuleForm);
+        document.getElementById("targetTypeSelect").addEventListener("change", updateRuleForm);
+        document.getElementById("discountTypeSelect").addEventListener("change", updateRuleForm);
+
+        updateRuleForm();
+    </script>
+}

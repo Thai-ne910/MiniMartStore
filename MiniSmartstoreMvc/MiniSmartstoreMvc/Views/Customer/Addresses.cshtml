@@ -1,0 +1,197 @@
+﻿@model MiniSmartstoreMvc.ViewModels.CustomerInfoViewModel
+
+@{
+    ViewData["Title"] = "Địa chỉ nhận hàng";
+    var hasAddress = !string.IsNullOrWhiteSpace(Model.Address);
+}
+
+<div class="container smart-account-page">
+    <div class="smart-account-layout">
+        <partial name="_CustomerSidebar" />
+
+        <main class="smart-account-content">
+            @if (hasAddress)
+            {
+                <div class="smart-address-title-row">
+                    <h1>Địa chỉ nhận hàng</h1>
+
+                    <button type="button"
+                            class="smart-add-address-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#addressModal">
+                        <span>+</span>
+                        Thêm mới
+                    </button>
+                </div>
+            }
+            else
+            {
+                <h1>Địa chỉ nhận hàng</h1>
+            }
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["Success"]
+                </div>
+            }
+
+            @if (hasAddress)
+            {
+                <div class="smart-address-card">
+                    <div class="smart-address-body">
+                        <a href="javascript:void(0)"
+                           class="smart-address-name"
+                           data-bs-toggle="modal"
+                           data-bs-target="#addressModal">
+                            @Model.FullName
+                        </a>
+
+                        <p>
+                            <strong>Số điện thoại:</strong>
+                            @(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "Chưa cập nhật" : Model.PhoneNumber)
+                        </p>
+
+                        <div class="smart-address-lines">
+                            <p>@Model.FullName</p>
+                            <p>@Model.Email</p>
+                            <p>@Model.Address</p>
+                        </div>
+                    </div>
+
+                    <div class="smart-address-footer">
+                        <button type="button"
+                                title="Sửa địa chỉ"
+                                data-bs-toggle="modal"
+                                data-bs-target="#addressModal">
+                            ✎
+                        </button>
+
+                        <form asp-controller="Customer"
+                              asp-action="ClearAddress"
+                              method="post"
+                              onsubmit="return confirm('Bạn có chắc muốn xóa địa chỉ này không?');">
+
+                            @Html.AntiForgeryToken()
+
+                            <button type="submit" title="Xóa địa chỉ">
+                                🗑
+                            </button>
+                        </form>
+
+                        <span class="smart-default-address">
+                            Địa chỉ mặc định
+                        </span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="smart-empty-address-state">
+                    <div class="smart-empty-address-icon">📍</div>
+
+                    <h3>Bạn chưa có địa chỉ nhận hàng nào</h3>
+
+                    <p>
+                        Hãy thêm địa chỉ để quá trình thanh toán và giao hàng nhanh hơn.
+                    </p>
+
+                    <button type="button"
+                            class="smart-add-address-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#addressModal">
+                        <span>+</span>
+                        Thêm mới
+                    </button>
+                </div>
+            }
+        </main>
+    </div>
+</div>
+
+<div class="modal fade smart-address-modal"
+     id="addressModal"
+     tabindex="-1"
+     aria-labelledby="addressModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addressModalLabel">
+                    @(hasAddress ? "Cập nhật địa chỉ nhận hàng" : "Thêm địa chỉ nhận hàng")
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <form asp-controller="Customer"
+                  asp-action="Addresses"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <input asp-for="Email" type="hidden" />
+
+                    <div class="smart-modal-form-row">
+                        <label>Họ tên người nhận</label>
+
+                        <div>
+                            <input asp-for="FullName"
+                                   class="form-control"
+                                   placeholder="Nhập họ tên người nhận" />
+
+                            <span asp-validation-for="FullName" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="smart-modal-form-row">
+                        <label>Số điện thoại</label>
+
+                        <div>
+                            <input asp-for="PhoneNumber"
+                                   class="form-control"
+                                   placeholder="Nhập số điện thoại" />
+
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="smart-modal-form-row smart-modal-form-row-top">
+                        <label>Địa chỉ nhận hàng</label>
+
+                        <div>
+                            <textarea asp-for="Address"
+                                      class="form-control"
+                                      rows="5"
+                                      placeholder="Nhập địa chỉ nhận hàng"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="smart-modal-cancel-btn"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="smart-save-btn">
+                        ✓ Lưu địa chỉ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

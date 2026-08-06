@@ -1,0 +1,314 @@
+﻿@model List<MiniSmartstoreMvc.Models.ProductReview>
+
+@{
+    ViewData["Title"] = "Đánh giá sản phẩm";
+
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int pageSize = ViewBag.PageSize ?? 20;
+    int totalItems = ViewBag.TotalItems ?? 0;
+
+    string? search = ViewBag.Search as string;
+    int? rating = ViewBag.Rating as int?;
+    string? status = ViewBag.Status as string;
+    string? fromDate = ViewBag.FromDate as string;
+    string? toDate = ViewBag.ToDate as string;
+
+    double averageRating = ViewBag.AverageRating ?? 0;
+}
+
+<div class="admin-review-page">
+    <div class="admin-review-header">
+        <div>
+            <h1>Đánh giá sản phẩm</h1>
+            <p>Quản lý đánh giá, duyệt nội dung hiển thị và theo dõi phản hồi của khách hàng về sản phẩm.</p>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="admin-review-alert success">
+            @TempData["Success"]
+        </div>
+    }
+
+    <div class="admin-review-stats">
+        <div class="admin-review-stat-card">
+            <span>Tổng đánh giá</span>
+            <strong>@ViewBag.TotalReviews</strong>
+        </div>
+
+        <div class="admin-review-stat-card">
+            <span>Đang hiển thị</span>
+            <strong>@ViewBag.ApprovedReviews</strong>
+        </div>
+
+        <div class="admin-review-stat-card">
+            <span>Đang ẩn</span>
+            <strong>@ViewBag.HiddenReviews</strong>
+        </div>
+
+        <div class="admin-review-stat-card">
+            <span>Điểm trung bình</span>
+            <strong>@averageRating.ToString("0.0")/5</strong>
+        </div>
+    </div>
+
+    <form method="get" class="admin-review-filter">
+        <div class="admin-review-filter-grid">
+            <div>
+                <label>Tìm kiếm</label>
+                <input type="text"
+                       name="search"
+                       value="@search"
+                       placeholder="Tên sản phẩm, khách hàng, tiêu đề, nội dung..." />
+            </div>
+
+            <div>
+                <label>Số sao</label>
+                <select name="rating">
+                    <option value="">Tất cả</option>
+                    @for (int i = 5; i >= 1; i--)
+                    {
+                        <option value="@i" selected="@(rating == i)">
+                            @i sao
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label>Trạng thái</label>
+                <select name="status">
+                    <option value="">Tất cả</option>
+                    <option value="approved" selected="@(status == "approved")">Đang hiển thị</option>
+                    <option value="hidden" selected="@(status == "hidden")">Đang ẩn</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Từ ngày</label>
+                <input type="date" name="fromDate" value="@fromDate" />
+            </div>
+
+            <div>
+                <label>Đến ngày</label>
+                <input type="date" name="toDate" value="@toDate" />
+            </div>
+
+            <div class="admin-review-filter-actions">
+                <button type="submit">Lọc</button>
+
+                <a asp-area="Admin"
+                   asp-controller="ProductReview"
+                   asp-action="Index">
+                    Xóa lọc
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <div class="admin-review-table-card">
+        <table class="admin-review-table">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Khách hàng</th>
+                    <th>Đánh giá</th>
+                    <th>Nội dung</th>
+                    <th>Ngày gửi</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        var productImage = string.IsNullOrWhiteSpace(item.Product?.ImageUrl)
+                            ? "/images/products/no-image.jpg"
+                            : item.Product.ImageUrl;
+
+                        var customerName = item.User?.FullName;
+
+                        if (string.IsNullOrWhiteSpace(customerName))
+                        {
+                            customerName = item.User?.Email ?? "Khách hàng";
+                        }
+
+                        <tr>
+                            <td>
+                                <div class="admin-review-product">
+                                    <img src="@productImage"
+                                         onerror="this.src='/images/products/no-image.jpg'"
+                                         alt="@item.Product?.Name" />
+
+                                    <div>
+                                        <strong>@(item.Product?.Name ?? "Sản phẩm đã bị xóa")</strong>
+
+                                        @if (item.Product != null)
+                                        {
+                                            <a asp-area=""
+                                               asp-controller="Product"
+                                               asp-action="Details"
+                                               asp-route-id="@item.ProductId"
+                                               target="_blank">
+                                                Xem ngoài shop
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="admin-review-customer">
+                                    <strong>@customerName</strong>
+                                    <span>@item.User?.Email</span>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="admin-review-stars">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <span class="@(i <= item.Rating ? "filled" : "")">★</span>
+                                    }
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="admin-review-content">
+                                    <strong>@item.Title</strong>
+                                    <p>@item.Comment</p>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="admin-review-date">
+                                    <strong>@item.CreatedAt.ToString("dd/MM/yyyy")</strong>
+                                    <span>@item.CreatedAt.ToString("HH:mm")</span>
+                                </div>
+                            </td>
+
+                            <td>
+                                @if (item.IsApproved)
+                                {
+                                    <span class="admin-review-status approved">Hiển thị</span>
+                                }
+                                else
+                                {
+                                    <span class="admin-review-status hidden">Đang ẩn</span>
+                                }
+                            </td>
+
+                            <td class="text-end">
+                                <div class="admin-review-actions">
+                                    <a asp-area="Admin"
+                                       asp-controller="ProductReview"
+                                       asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="admin-review-action-btn">
+                                        Xem
+                                    </a>
+
+                                    @if (item.IsApproved)
+                                    {
+                                        <form asp-area="Admin"
+                                              asp-controller="ProductReview"
+                                              asp-action="Hide"
+                                              asp-route-id="@item.Id"
+                                              method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="admin-review-action-btn warning">
+                                                Ẩn
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-area="Admin"
+                                              asp-controller="ProductReview"
+                                              asp-action="Approve"
+                                              asp-route-id="@item.Id"
+                                              method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="admin-review-action-btn success">
+                                                Duyệt
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <form asp-area="Admin"
+                                          asp-controller="ProductReview"
+                                          asp-action="Delete"
+                                          asp-route-id="@item.Id"
+                                          method="post"
+                                          onsubmit="return confirm('Bạn có chắc muốn xóa đánh giá này không?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="admin-review-action-btn danger">
+                                            Xóa
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7">
+                            <div class="admin-review-empty">
+                                Không tìm thấy đánh giá nào.
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="admin-review-pager">
+            <div>
+                Đang hiển thị trang @currentPage / @Math.Max(totalPages, 1) - tổng @totalItems đánh giá
+            </div>
+
+            <div class="admin-review-pager-actions">
+                <a class="@(currentPage <= 1 ? "disabled" : "")"
+                   asp-area="Admin"
+                   asp-controller="ProductReview"
+                   asp-action="Index"
+                   asp-route-search="@search"
+                   asp-route-rating="@rating"
+                   asp-route-status="@status"
+                   asp-route-fromDate="@fromDate"
+                   asp-route-toDate="@toDate"
+                   asp-route-page="@(currentPage - 1)"
+                   asp-route-pageSize="@pageSize">
+                    Trước
+                </a>
+
+                <span>@currentPage</span>
+
+                <a class="@(currentPage >= totalPages ? "disabled" : "")"
+                   asp-area="Admin"
+                   asp-controller="ProductReview"
+                   asp-action="Index"
+                   asp-route-search="@search"
+                   asp-route-rating="@rating"
+                   asp-route-status="@status"
+                   asp-route-fromDate="@fromDate"
+                   asp-route-toDate="@toDate"
+                   asp-route-page="@(currentPage + 1)"
+                   asp-route-pageSize="@pageSize">
+                    Sau
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin/admin-product-review.css" asp-append-version="true" />
+}

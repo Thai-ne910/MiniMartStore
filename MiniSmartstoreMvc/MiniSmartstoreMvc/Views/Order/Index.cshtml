@@ -1,0 +1,179 @@
+﻿@using MiniSmartstoreMvc.Models
+@model IEnumerable<MiniSmartstoreMvc.Models.Order>
+
+@{
+    ViewData["Title"] = "Đơn hàng của tôi";
+
+    var orders = Model?.ToList() ?? new List<Order>();
+
+    var totalOrders = orders.Count;
+    var pendingOrders = orders.Count(x => x.OrderStatus == OrderStatus.Pending);
+    var completedOrders = orders.Count(x => x.OrderStatus == OrderStatus.Completed);
+    var totalSpent = orders
+        .Where(x => x.OrderStatus != OrderStatus.Cancelled)
+        .Sum(x => x.TotalAmount);
+}
+
+<div class="container smart-account-page">
+    <div class="smart-account-layout">
+        <partial name="_CustomerSidebar" />
+
+        <main class="smart-account-content smart-order-page">
+            <div class="smart-order-header">
+                <div>
+                    <h1>Đơn hàng của tôi</h1>
+                    <p>
+                        Theo dõi lịch sử mua hàng, trạng thái đơn hàng và tình trạng thanh toán.
+                    </p>
+                </div>
+            </div>
+
+            @if (orders.Any())
+            {
+                <div class="smart-order-summary-grid">
+                    <div class="smart-order-stat-card">
+                        <span>Tổng đơn hàng</span>
+                        <strong>@totalOrders</strong>
+                    </div>
+
+                    <div class="smart-order-stat-card">
+                        <span>Đơn chờ xử lý</span>
+                        <strong>@pendingOrders</strong>
+                    </div>
+
+                    <div class="smart-order-stat-card">
+                        <span>Đơn hoàn thành</span>
+                        <strong>@completedOrders</strong>
+                    </div>
+
+                    <div class="smart-order-stat-card">
+                        <span>Tổng đã mua</span>
+                        <strong>@totalSpent.ToString("N0") đ</strong>
+                    </div>
+                </div>
+
+                <div class="smart-order-list">
+                    @foreach (var item in orders)
+                    {
+                        <div class="smart-order-card">
+                            <div class="smart-order-card-top">
+                                <div>
+                                    <div class="smart-order-code">
+                                        @item.OrderCode
+                                    </div>
+
+                                    <div class="smart-order-date">
+                                        Ngày đặt: @item.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                    </div>
+                                </div>
+
+                                <div class="smart-order-total">
+                                    @item.TotalAmount.ToString("N0") đ
+                                </div>
+                            </div>
+
+                            <div class="smart-order-card-bottom">
+                                <div class="smart-order-info-box">
+                                    <span>Trạng thái đơn hàng</span>
+
+                                    <strong class="badge @OrderStatusBadge(item.OrderStatus)">
+                                        @OrderStatusText(item.OrderStatus)
+                                    </strong>
+                                </div>
+
+                                <div class="smart-order-info-box">
+                                    <span>Trạng thái thanh toán</span>
+
+                                    <strong class="badge @PaymentStatusBadge(item.PaymentStatus)">
+                                        @PaymentStatusText(item.PaymentStatus)
+                                    </strong>
+                                </div>
+
+                                <div class="smart-order-info-box">
+                                    <span>Ngày cập nhật</span>
+
+                                    <strong>
+                                        @item.CreatedAt.ToString("dd/MM/yyyy")
+                                    </strong>
+                                </div>
+
+                                <div class="smart-order-action-box">
+                                    <a asp-controller="Order"
+                                       asp-action="Details"
+                                       asp-route-id="@item.Id"
+                                       class="smart-order-detail-btn">
+                                        Xem chi tiết
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="smart-order-empty-state">
+                    <div class="smart-order-empty-alert">
+                        Không có đơn hàng nào.
+                    </div>
+
+                    <a asp-controller="Product"
+                       asp-action="Index"
+                       class="smart-order-shop-btn">
+                        Mua sắm ngay
+                    </a>
+                </div>
+            }
+        </main>
+    </div>
+</div>
+
+@functions {
+    private string OrderStatusText(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "Chờ xử lý",
+            OrderStatus.Processing => "Đang xử lý",
+            OrderStatus.Completed => "Hoàn thành",
+            OrderStatus.Cancelled => "Đã hủy",
+            _ => status.ToString()
+        };
+    }
+
+    private string PaymentStatusText(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Pending => "Chờ thanh toán",
+            PaymentStatus.Paid => "Đã thanh toán",
+            PaymentStatus.Failed => "Thất bại",
+            PaymentStatus.Cancelled => "Đã hủy",
+            _ => status.ToString()
+        };
+    }
+
+    private string OrderStatusBadge(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "bg-warning text-dark",
+            OrderStatus.Processing => "bg-primary",
+            OrderStatus.Completed => "bg-success",
+            OrderStatus.Cancelled => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string PaymentStatusBadge(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Pending => "bg-warning text-dark",
+            PaymentStatus.Paid => "bg-success",
+            PaymentStatus.Failed => "bg-danger",
+            PaymentStatus.Cancelled => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+}

@@ -1,0 +1,497 @@
+﻿@model IEnumerable<MiniSmartstoreMvc.Models.Product>
+
+@{
+    ViewData["Title"] = "Quản lý sản phẩm";
+
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int pageSize = ViewBag.PageSize ?? 25;
+    int totalItems = ViewBag.TotalItems ?? 0;
+    bool filterOpen = ViewBag.FilterOpen ?? false;
+    bool? published = ViewBag.Published as bool?;
+
+    var search = ViewBag.Search as string;
+    var categoryId = ViewBag.CategoryId;
+    var minPrice = ViewBag.MinPrice;
+    var maxPrice = ViewBag.MaxPrice;
+    var sortBy = ViewBag.SortBy;
+}
+
+<div class="admin-product-page">
+    <div class="admin-product-card">
+        <div class="admin-product-header">
+            <div class="admin-product-title">
+                <h1>Quản lý sản phẩm</h1>
+                <p>Thêm, chỉnh sửa, ẩn/hiện, lọc và quản lý tồn kho sản phẩm ngoài cửa hàng.</p>
+            </div>
+
+            <a asp-area="Admin"
+               asp-controller="Product"
+               asp-action="Create"
+               class="admin-primary-btn">
+                <span>+</span>
+                <span>Thêm sản phẩm</span>
+            </a>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-alert admin-alert-success">
+                @TempData["Success"]
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-alert admin-alert-danger">
+                @TempData["Error"]
+            </div>
+        }
+
+        <div class="admin-product-toolbar">
+            <button type="button"
+                    id="toggleProductFilter"
+                    class="admin-filter-btn @(filterOpen ? "active" : "")"
+                    title="Bộ lọc">
+                <span class="admin-css-icon admin-icon-filter"></span>
+            </button>
+
+            <a asp-area="Admin"
+               asp-controller="Product"
+               asp-action="Create"
+               class="admin-add-inline-btn">
+                <span>+</span>
+                <span>Thêm mới...</span>
+            </a>
+
+            <button type="button"
+                    class="admin-delete-selected-btn"
+                    disabled
+                    title="Chưa bật chức năng xóa nhiều sản phẩm">
+                <span class="admin-css-icon admin-icon-trash"></span>
+                <span>Xóa mục đã chọn</span>
+            </button>
+        </div>
+
+        <div class="admin-product-manager @(filterOpen ? "filter-open" : "")" id="adminProductManager">
+            <aside class="admin-product-filter-panel">
+                <form asp-area="Admin"
+                      asp-controller="Product"
+                      asp-action="Index"
+                      method="get">
+
+                    <input type="hidden" name="filterOpen" value="true" />
+
+                    <div class="admin-filter-panel-title">
+                        Bộ lọc sản phẩm
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Tên sản phẩm</label>
+                        <input type="text"
+                               name="search"
+                               value="@search"
+                               placeholder="Nhập tên sản phẩm..." />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Danh mục</label>
+                        <select name="categoryId" asp-items="ViewBag.Categories">
+                            <option value="">Tất cả danh mục</option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Trạng thái hiển thị</label>
+                        <select name="published">
+                            <option value="">Không chọn</option>
+                            <option value="true" selected="@(published == true ? "selected" : null)">Đang hiển thị</option>
+                            <option value="false" selected="@(published == false ? "selected" : null)">Đã ẩn</option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-row">
+                        <div class="admin-filter-group">
+                            <label>Giá từ</label>
+                            <input type="number"
+                                   name="minPrice"
+                                   value="@minPrice"
+                                   placeholder="0" />
+                        </div>
+
+                        <div class="admin-filter-group">
+                            <label>Giá đến</label>
+                            <input type="number"
+                                   name="maxPrice"
+                                   value="@maxPrice"
+                                   placeholder="1000000" />
+                        </div>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Sắp xếp theo</label>
+                        <select name="sortBy">
+                            <option value="newest" selected="@(sortBy == "newest" ? "selected" : null)">Mới nhất</option>
+                            <option value="name_asc" selected="@(sortBy == "name_asc" ? "selected" : null)">Tên A-Z</option>
+                            <option value="price_asc" selected="@(sortBy == "price_asc" ? "selected" : null)">Giá tăng dần</option>
+                            <option value="price_desc" selected="@(sortBy == "price_desc" ? "selected" : null)">Giá giảm dần</option>
+                            <option value="stock_asc" selected="@(sortBy == "stock_asc" ? "selected" : null)">Tồn kho thấp trước</option>
+                            <option value="stock_desc" selected="@(sortBy == "stock_desc" ? "selected" : null)">Tồn kho cao trước</option>
+                            <option value="featured" selected="@(sortBy == "featured" ? "selected" : null)">Sản phẩm nổi bật</option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Số dòng mỗi trang</label>
+                        <select name="pageSize">
+                            <option value="10" selected="@(pageSize == 10 ? "selected" : null)">10 dòng / trang</option>
+                            <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25 dòng / trang</option>
+                            <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50 dòng / trang</option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-actions">
+                        <button type="submit" class="admin-filter-submit">
+                            Áp dụng bộ lọc
+                        </button>
+
+                        <a asp-area="Admin"
+                           asp-controller="Product"
+                           asp-action="Index"
+                           class="admin-filter-reset">
+                            Đặt lại
+                        </a>
+                    </div>
+                </form>
+            </aside>
+
+            <section class="admin-product-table-section">
+                <div class="admin-product-table-wrap">
+                    <table class="admin-product-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 48px;">
+                                    <input type="checkbox" id="selectAllProducts" />
+                                </th>
+
+                                <th style="width: 72px;"></th>
+
+                                <th>Tên sản phẩm</th>
+
+                                <th style="width: 120px;">Mã SP</th>
+
+                                <th style="width: 140px;">Giá</th>
+
+                                <th style="width: 140px;">Thời gian giao</th>
+
+                                <th style="width: 110px;">Tồn kho</th>
+
+                                <th style="width: 160px;">Ngày tạo</th>
+
+                                <th style="width: 110px;">Hiển thị</th>
+
+                                <th style="width: 70px;"></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox"
+                                                   class="product-row-checkbox"
+                                                   value="@item.Id" />
+                                        </td>
+
+                                        <td>
+                                            <img src="@item.ImageUrl"
+                                                 onerror="this.src='/images/products/no-image.jpg'"
+                                                 class="admin-product-thumb"
+                                                 alt="@item.Name" />
+                                        </td>
+
+                                        <td>
+                                            <a asp-area="Admin"
+                                               asp-controller="Product"
+                                               asp-action="Edit"
+                                               asp-route-id="@item.Id"
+                                               class="admin-product-name">
+                                                @item.Name
+                                            </a>
+
+                                            <div class="admin-product-category">
+                                                @(item.Category?.Name ?? "Chưa có danh mục")
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <span class="admin-product-code-badge">
+                                                @(string.IsNullOrWhiteSpace(item.ProductCode) ? $"P-{item.Id:0000}" : item.ProductCode)
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <strong>@item.Price.ToString("N0") đ</strong>
+                                        </td>
+
+                                        <td>
+                                            <span class="admin-muted-text normal-text">
+                                                @(string.IsNullOrWhiteSpace(item.DeliveryTime) ? "Chưa thiết lập" : item.DeliveryTime)
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <span class="admin-order-number">
+                                                @item.StockQuantity.ToString("N0")
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <span class="admin-date-text">
+                                                @item.CreatedAt.ToString("dd/MM/yyyy")
+                                            </span>
+
+                                            <small>
+                                                @item.CreatedAt.ToString("HH:mm")
+                                            </small>
+                                        </td>
+
+                                        <td class="text-center">
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="admin-product-status is-on">
+                                                    Hiển thị
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="admin-product-status is-off">
+                                                    Đã ẩn
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <td class="text-end">
+                                            <div class="dropdown">
+                                                <button type="button"
+                                                        class="admin-more-btn"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false"
+                                                        title="Thao tác">
+                                                    <span class="admin-css-icon admin-icon-more"></span>
+                                                </button>
+
+                                                <ul class="dropdown-menu dropdown-menu-end admin-row-menu">
+                                                    <li>
+                                                        <a class="dropdown-item"
+                                                           asp-area="Admin"
+                                                           asp-controller="Product"
+                                                           asp-action="Edit"
+                                                           asp-route-id="@item.Id">
+                                                            Sửa sản phẩm
+                                                        </a>
+                                                    </li>
+
+                                                    <li>
+                                                        <form asp-area="Admin"
+                                                              asp-controller="Product"
+                                                              asp-action="ToggleActive"
+                                                              asp-route-id="@item.Id"
+                                                              method="post">
+                                                            @Html.AntiForgeryToken()
+
+                                                            <button type="submit" class="dropdown-item">
+                                                                @(item.IsActive ? "Ẩn sản phẩm" : "Hiện sản phẩm")
+                                                            </button>
+                                                        </form>
+                                                    </li>
+
+                                                    <li>
+                                                        <hr class="dropdown-divider" />
+                                                    </li>
+
+                                                    <li>
+                                                        <form asp-area="Admin"
+                                                              asp-controller="Product"
+                                                              asp-action="Delete"
+                                                              asp-route-id="@item.Id"
+                                                              method="post"
+                                                              onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này không?');">
+                                                            @Html.AntiForgeryToken()
+
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                Xóa sản phẩm
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="10" class="admin-empty-row">
+                                        Không tìm thấy sản phẩm nào.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="admin-product-footer">
+                    <div class="admin-pagination">
+                        <a class="admin-page-btn"
+                           asp-area="Admin"
+                           asp-controller="Product"
+                           asp-action="Index"
+                           title="Tải lại">
+                            <span class="admin-css-icon admin-icon-refresh"></span>
+                        </a>
+
+                        <a class="admin-page-btn @(currentPage <= 1 ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="Product"
+                           asp-action="Index"
+                           asp-route-search="@search"
+                           asp-route-categoryId="@categoryId"
+                           asp-route-minPrice="@minPrice"
+                           asp-route-maxPrice="@maxPrice"
+                           asp-route-published="@ViewBag.Published"
+                           asp-route-sortBy="@sortBy"
+                           asp-route-pageSize="@pageSize"
+                           asp-route-filterOpen="@filterOpen"
+                           asp-route-page="1">
+                            «
+                        </a>
+
+                        <a class="admin-page-btn @(currentPage <= 1 ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="Product"
+                           asp-action="Index"
+                           asp-route-search="@search"
+                           asp-route-categoryId="@categoryId"
+                           asp-route-minPrice="@minPrice"
+                           asp-route-maxPrice="@maxPrice"
+                           asp-route-published="@ViewBag.Published"
+                           asp-route-sortBy="@sortBy"
+                           asp-route-pageSize="@pageSize"
+                           asp-route-filterOpen="@filterOpen"
+                           asp-route-page="@(currentPage - 1)">
+                            ‹
+                        </a>
+
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <a class="admin-page-btn @(i == currentPage ? "active" : "")"
+                               asp-area="Admin"
+                               asp-controller="Product"
+                               asp-action="Index"
+                               asp-route-search="@search"
+                               asp-route-categoryId="@categoryId"
+                               asp-route-minPrice="@minPrice"
+                               asp-route-maxPrice="@maxPrice"
+                               asp-route-published="@ViewBag.Published"
+                               asp-route-sortBy="@sortBy"
+                               asp-route-pageSize="@pageSize"
+                               asp-route-filterOpen="@filterOpen"
+                               asp-route-page="@i">
+                                @i
+                            </a>
+                        }
+
+                        <a class="admin-page-btn @(currentPage >= totalPages ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="Product"
+                           asp-action="Index"
+                           asp-route-search="@search"
+                           asp-route-categoryId="@categoryId"
+                           asp-route-minPrice="@minPrice"
+                           asp-route-maxPrice="@maxPrice"
+                           asp-route-published="@ViewBag.Published"
+                           asp-route-sortBy="@sortBy"
+                           asp-route-pageSize="@pageSize"
+                           asp-route-filterOpen="@filterOpen"
+                           asp-route-page="@(currentPage + 1)">
+                            ›
+                        </a>
+
+                        <a class="admin-page-btn @(currentPage >= totalPages ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="Product"
+                           asp-action="Index"
+                           asp-route-search="@search"
+                           asp-route-categoryId="@categoryId"
+                           asp-route-minPrice="@minPrice"
+                           asp-route-maxPrice="@maxPrice"
+                           asp-route-published="@ViewBag.Published"
+                           asp-route-sortBy="@sortBy"
+                           asp-route-pageSize="@pageSize"
+                           asp-route-filterOpen="@filterOpen"
+                           asp-route-page="@totalPages">
+                            »
+                        </a>
+                    </div>
+
+                    <div class="admin-footer-info">
+                        <span>
+                            Đang hiển thị trang @currentPage / @totalPages — tổng @totalItems sản phẩm
+                        </span>
+
+                        <form asp-area="Admin"
+                              asp-controller="Product"
+                              asp-action="Index"
+                              method="get"
+                              class="admin-page-size-form">
+
+                            <input type="hidden" name="search" value="@search" />
+                            <input type="hidden" name="categoryId" value="@categoryId" />
+                            <input type="hidden" name="minPrice" value="@minPrice" />
+                            <input type="hidden" name="maxPrice" value="@maxPrice" />
+                            <input type="hidden" name="published" value="@ViewBag.Published" />
+                            <input type="hidden" name="sortBy" value="@sortBy" />
+                            <input type="hidden" name="filterOpen" value="@filterOpen" />
+
+                            <select name="pageSize" onchange="this.form.submit()" class="admin-page-size">
+                                <option value="10" selected="@(pageSize == 10 ? "selected" : null)">10 dòng / trang</option>
+                                <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25 dòng / trang</option>
+                                <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50 dòng / trang</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const productFilterButton = document.getElementById("toggleProductFilter");
+        const productManager = document.getElementById("adminProductManager");
+
+        if (productFilterButton && productManager) {
+            productFilterButton.addEventListener("click", function () {
+                productManager.classList.toggle("filter-open");
+                productFilterButton.classList.toggle("active");
+            });
+        }
+
+        const selectAllProducts = document.getElementById("selectAllProducts");
+        const productCheckboxes = document.querySelectorAll(".product-row-checkbox");
+
+        if (selectAllProducts) {
+            selectAllProducts.addEventListener("change", function () {
+                productCheckboxes.forEach(function (checkbox) {
+                    checkbox.checked = selectAllProducts.checked;
+                });
+            });
+        }
+    </script>
+}

@@ -1,0 +1,25 @@
+﻿@model dynamic
+
+<div class="checkout-summary-box">
+    <div class="checkout-summary-row">
+        <span>Tạm tính:</span>
+        <strong>@Model.ProductsTotal.ToString("N0") đ</strong>
+    </div>
+
+    <div class="checkout-summary-row">
+        <span>Phí giao hàng:</span>
+        <strong>@Model.ShippingFee.ToString("N0") đ</strong>
+    </div>
+
+    <div class="checkout-summary-row">
+        <span>Thuế:</span>
+        <strong>0 đ</strong>
+    </div>
+
+    <hr />
+
+    <div class="checkout-summary-total">
+        <span>Tổng cộng:</span>
+        <strong>@Model.Total.ToString("N0") đ</strong>
+    </div>
+</div>

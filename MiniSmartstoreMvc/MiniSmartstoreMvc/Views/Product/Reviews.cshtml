@@ -1,0 +1,183 @@
+﻿@model MiniSmartstoreMvc.Models.Product
+@using MiniSmartstoreMvc.Models
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Product reviews for " + Model.Name;
+
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    var hasCurrentUserReviewed = !string.IsNullOrWhiteSpace(currentUserId) &&
+        (Model.ProductReviews?.Any(x => x.UserId == currentUserId) ?? false);
+
+    var canReview = User.Identity?.IsAuthenticated == true && !hasCurrentUserReviewed;
+
+    var approvedReviews = Model.ProductReviews?
+        .Where(x => x.IsApproved)
+        .OrderByDescending(x => x.CreatedAt)
+        .ToList() ?? new List<ProductReview>();
+}
+
+<div class="product-review-page">
+    <h1>
+        Product reviews for
+        <a asp-controller="Product"
+           asp-action="Details"
+           asp-route-id="@Model.Id">
+            @Model.Name
+        </a>
+    </h1>
+
+    @if (TempData["ReviewSuccess"] != null)
+    {
+        <div class="product-review-alert success">
+            @TempData["ReviewSuccess"]
+        </div>
+    }
+
+    @if (TempData["ReviewError"] != null)
+    {
+        <div class="product-review-alert danger">
+            @TempData["ReviewError"]
+        </div>
+    }
+
+    <div class="product-review-form-card">
+        @if (canReview)
+        {
+            <form asp-controller="Product"
+                  asp-action="AddReview"
+                  method="post"
+                  class="product-review-page-form">
+
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="productId" value="@Model.Id" />
+
+                <div class="product-review-page-row">
+                    <label>Your rating?</label>
+
+                    <div class="product-review-star-input">
+                        @for (int i = 5; i >= 1; i--)
+                        {
+                            <input type="radio"
+                                   id="rating-@i"
+                                   name="rating"
+                                   value="@i"
+                                   checked="@(i == 5)" />
+
+                            <label for="rating-@i" title="@i sao">
+                                ★
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <div class="product-review-page-row">
+                    <label>Headline for your review *</label>
+
+                    <input type="text"
+                           name="title"
+                           maxlength="150"
+                           required />
+                </div>
+
+                <div class="product-review-page-row">
+                    <label>Your opinion on the product *</label>
+
+                    <textarea name="comment"
+                              rows="6"
+                              maxlength="2000"
+                              required></textarea>
+                </div>
+
+                <div class="product-review-page-help">
+                    * Input fields with an asterisk are mandatory and must be filled in.
+                </div>
+
+                <label class="product-review-privacy">
+                    <input type="checkbox" name="acceptTerms" value="true" required />
+
+                    <span>
+                        Yes, I've read the
+                        <a href="#" onclick="return false;">privacy terms</a>
+                        and agree that my data given by me can be stored electronically.
+                        My data will thereby only be used to process my inquiry.
+                    </span>
+                </label>
+
+                <button type="submit" class="product-review-submit-btn">
+                    Submit review
+                </button>
+            </form>
+        }
+        else if (User.Identity?.IsAuthenticated == true && hasCurrentUserReviewed)
+        {
+            <div class="product-review-already">
+                <h3>Bạn đã đánh giá sản phẩm này rồi.</h3>
+                <p>Mỗi tài khoản chỉ được đánh giá một lần cho một sản phẩm.</p>
+
+                <a asp-controller="Product"
+                   asp-action="Details"
+                   asp-route-id="@Model.Id"
+                   asp-fragment="reviewsTab">
+                    Quay lại danh sách đánh giá
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="product-review-already">
+                <h3>Bạn cần đăng nhập để đánh giá sản phẩm.</h3>
+                <p>Sau khi đăng nhập, bạn có thể gửi đánh giá cho sản phẩm này.</p>
+
+                <a asp-area="Identity"
+                   asp-page="/Account/Login"
+                   asp-route-returnUrl="@Url.Action("Reviews", "Product", new { id = Model.Id })">
+                    Đăng nhập để đánh giá
+                </a>
+            </div>
+        }
+    </div>
+
+    @if (approvedReviews.Any())
+    {
+        <section class="product-review-existing">
+            <h2>Reviews đã gửi</h2>
+
+            @foreach (var review in approvedReviews)
+            {
+                var reviewerName = review.User?.FullName;
+
+                if (string.IsNullOrWhiteSpace(reviewerName))
+                {
+                    reviewerName = review.User?.Email ?? "Khách hàng";
+                }
+
+                <article class="product-review-item">
+                    <div class="product-review-avatar">
+                        @reviewerName.Substring(0, 1).ToUpper()
+                    </div>
+
+                    <div class="product-review-content">
+                        <div class="product-review-head">
+                            <div>
+                                <h4>@review.Title</h4>
+                                <p>@reviewerName · @review.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                            </div>
+
+                            <div class="product-review-stars">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi @(i <= review.Rating ? "bi-star-fill filled" : "bi-star")"></i>
+                                }
+                            </div>
+                        </div>
+
+                        <p class="product-review-comment">@review.Comment</p>
+                    </div>
+                </article>
+            }
+        </section>
+    }
+</div>

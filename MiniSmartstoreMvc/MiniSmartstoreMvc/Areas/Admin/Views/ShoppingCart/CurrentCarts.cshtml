@@ -1,0 +1,268 @@
+﻿@model List<MiniSmartstoreMvc.ViewModels.AdminCurrentCartViewModel>
+
+@{
+    ViewData["Title"] = "Giỏ hàng hiện tại";
+
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int pageSize = ViewBag.PageSize ?? 25;
+    int totalItems = ViewBag.TotalItems ?? 0;
+    bool filterOpen = ViewBag.FilterOpen ?? false;
+
+    string? createdFrom = ViewBag.CreatedFrom as string;
+    string? createdTo = ViewBag.CreatedTo as string;
+    string? email = ViewBag.Email as string;
+}
+
+<div class="admin-sales-page">
+    <div class="admin-sales-card">
+        <div class="admin-sales-header">
+            <div>
+                <h1>Giỏ hàng hiện tại</h1>
+                <p>Theo dõi các giỏ hàng đang còn sản phẩm nhưng chưa thanh toán.</p>
+            </div>
+        </div>
+
+        <div class="admin-sales-toolbar">
+            <button type="button"
+                    class="admin-filter-btn"
+                    id="currentCartFilterToggle"
+                    title="Bộ lọc">
+                <span class="admin-css-icon admin-icon-filter"></span>
+            </button>
+        </div>
+
+        <div class="admin-sales-manager @(filterOpen ? "filter-open" : "")" id="currentCartManager">
+            <aside class="admin-sales-filter-panel">
+                <form asp-area="Admin"
+                      asp-controller="ShoppingCart"
+                      asp-action="CurrentCarts"
+                      method="get">
+
+                    <input type="hidden" name="filterOpen" value="true" />
+
+                    <h3>Bộ lọc</h3>
+
+                    <div class="admin-filter-group">
+                        <label>Ngày cập nhật</label>
+                        <div class="admin-filter-row">
+                            <input type="date" name="createdFrom" value="@createdFrom" />
+                            <input type="date" name="createdTo" value="@createdTo" />
+                        </div>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Email khách hàng</label>
+                        <input type="text"
+                               name="email"
+                               value="@email"
+                               placeholder="Nhập email khách hàng" />
+                    </div>
+
+                    <div class="admin-filter-actions">
+                        <button type="submit" class="admin-filter-submit">
+                            Áp dụng bộ lọc
+                        </button>
+
+                        <a asp-area="Admin"
+                           asp-controller="ShoppingCart"
+                           asp-action="CurrentCarts"
+                           class="admin-filter-reset">
+                            Đặt lại
+                        </a>
+                    </div>
+                </form>
+            </aside>
+
+            <section class="admin-sales-table-section">
+                <div class="admin-sales-table-wrap">
+                    <table class="admin-sales-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 54px;"></th>
+                                <th>Khách hàng</th>
+                                <th style="width: 180px;">Tổng sản phẩm</th>
+                                <th style="width: 220px;">Ngày cập nhật</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @if (Model.Any())
+                            {
+                                var index = 0;
+
+                                foreach (var cart in Model)
+                                {
+                                    index++;
+
+                                    <tr class="admin-cart-parent-row">
+                                        <td>
+                                            <button type="button"
+                                                    class="admin-cart-expand-btn"
+                                                    data-target="cart-detail-@index">
+                                                <span class="admin-css-icon admin-icon-chevron"></span>
+                                            </button>
+                                        </td>
+
+                                        <td>
+                                            <div class="admin-sales-main-text">@cart.CustomerEmail</div>
+                                            <small>@cart.CustomerName</small>
+                                        </td>
+
+                                        <td>@cart.TotalItems</td>
+
+                                        <td>
+                                            @(cart.UpdatedAt.HasValue
+                                                ? cart.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                                                : "Chưa có dữ liệu")
+                                        </td>
+                                    </tr>
+
+                                    <tr class="admin-cart-detail-row" id="cart-detail-@index">
+                                        <td colspan="4">
+                                            <div class="admin-cart-detail-box">
+                                                <table>
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Sản phẩm</th>
+                                                            <th style="width: 120px;">Hiển thị</th>
+                                                            <th style="width: 120px;">Số lượng</th>
+                                                            <th style="width: 180px;">Đơn giá</th>
+                                                            <th style="width: 180px;" class="text-end">Tổng</th>
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tbody>
+                                                        @foreach (var product in cart.Products)
+                                                        {
+                                                            <tr>
+                                                                <td>
+                                                                    <a asp-area=""
+                                                                       asp-controller="Product"
+                                                                       asp-action="Details"
+                                                                       asp-route-id="@product.ProductId">
+                                                                        @product.ProductName
+                                                                    </a>
+
+                                                                    @if (!string.IsNullOrWhiteSpace(product.CategoryName))
+                                                                    {
+                                                                        <small>@product.CategoryName</small>
+                                                                    }
+                                                                </td>
+
+                                                                <td>
+                                                                    @if (product.IsActive)
+                                                                    {
+                                                                        <span class="admin-check-mark"></span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span class="admin-x-mark"></span>
+                                                                    }
+                                                                </td>
+
+                                                                <td>@product.Quantity</td>
+                                                                <td>@product.UnitPrice.ToString("N0") đ</td>
+                                                                <td class="text-end">@product.Total.ToString("N0") đ</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="admin-empty-row">
+                                        Không có giỏ hàng nào.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="admin-sales-footer">
+                    <div class="admin-pagination">
+                        <a class="admin-page-btn"
+                           asp-area="Admin"
+                           asp-controller="ShoppingCart"
+                           asp-action="CurrentCarts"
+                           asp-route-page="1"
+                           asp-route-pageSize="@pageSize">
+                            <span class="admin-css-icon admin-icon-refresh"></span>
+                        </a>
+
+                        <a class="admin-page-btn @(currentPage <= 1 ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="ShoppingCart"
+                           asp-action="CurrentCarts"
+                           asp-route-page="@(currentPage - 1)"
+                           asp-route-pageSize="@pageSize">
+                            ‹
+                        </a>
+
+                        <span class="admin-page-btn active">@currentPage</span>
+
+                        <a class="admin-page-btn @(currentPage >= totalPages ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="ShoppingCart"
+                           asp-action="CurrentCarts"
+                           asp-route-page="@(currentPage + 1)"
+                           asp-route-pageSize="@pageSize">
+                            ›
+                        </a>
+                    </div>
+
+                    <div class="admin-footer-info">
+                        <span>Đang hiển thị @Model.Count / @totalItems giỏ hàng</span>
+
+                        <form asp-area="Admin"
+                              asp-controller="ShoppingCart"
+                              asp-action="CurrentCarts"
+                              method="get">
+                            <select name="pageSize"
+                                    onchange="this.form.submit()"
+                                    class="admin-page-size">
+                                <option value="10" selected="@(pageSize == 10 ? "selected" : null)">10 dòng / trang</option>
+                                <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25 dòng / trang</option>
+                                <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50 dòng / trang</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const manager = document.getElementById("currentCartManager");
+            const filterBtn = document.getElementById("currentCartFilterToggle");
+
+            if (manager && filterBtn) {
+                filterBtn.addEventListener("click", function () {
+                    manager.classList.toggle("filter-open");
+                    filterBtn.classList.toggle("active");
+                });
+            }
+
+            document.querySelectorAll(".admin-cart-expand-btn").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const targetId = button.dataset.target;
+                    const target = document.getElementById(targetId);
+
+                    if (target) {
+                        target.classList.toggle("collapsed");
+                        button.classList.toggle("collapsed");
+                    }
+                });
+            });
+        });
+    </script>
+}

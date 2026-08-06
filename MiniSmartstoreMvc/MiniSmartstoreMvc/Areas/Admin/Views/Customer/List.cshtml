@@ -1,0 +1,294 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminCustomerListViewModel
+
+@{
+    ViewData["Title"] = "Quản lý khách hàng";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin/admin-customer.css" asp-append-version="true" />
+}
+
+<div class="admin-customer-page">
+    <div class="admin-customer-card">
+        <div class="admin-customer-header">
+            <div>
+                <h1>Quản lý khách hàng</h1>
+                <p>Theo dõi tài khoản, vai trò, trạng thái và lịch sử mua hàng của khách.</p>
+            </div>
+
+            <div class="admin-customer-actions">
+                <a asp-area="Admin"
+                   asp-controller="Customer"
+                   asp-action="Create"
+                   class="admin-customer-primary-btn">
+                    + Thêm khách hàng
+                </a>
+            </div>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-customer-alert success">@TempData["Success"]</div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-customer-alert danger">@TempData["Error"]</div>
+        }
+
+        <div class="admin-customer-manager" id="adminCustomerManager">
+            <div class="admin-customer-grid">
+                <aside class="admin-customer-filter">
+                    <div class="admin-customer-filter-inner">
+                        <h2>Bộ lọc</h2>
+
+                        <form asp-area="Admin" asp-controller="Customer" asp-action="List" method="get">
+                            <label>Từ khóa</label>
+                            <input type="text"
+                                   name="search"
+                                   value="@Model.Search"
+                                   placeholder="Email, tên, số điện thoại..." />
+
+                            <label>Vai trò</label>
+                            <select name="role">
+                                <option value="">Tất cả vai trò</option>
+                                @foreach (var role in Model.Roles)
+                                {
+                                    <option value="@role.Value" selected="@(Model.Role == role.Value)">
+                                        @role.Text
+                                    </option>
+                                }
+                            </select>
+
+                            <label>Trạng thái</label>
+                            <select name="active">
+                                <option value="">Tất cả</option>
+                                <option value="active" selected="@(Model.Active == "active")">Đang hoạt động</option>
+                                <option value="locked" selected="@(Model.Active == "locked")">Đang khóa</option>
+                            </select>
+
+                            <input type="hidden" name="pageSize" value="@Model.PageSize" />
+
+                            <div class="admin-customer-filter-actions">
+                                <button type="submit">Áp dụng bộ lọc</button>
+
+                                <a asp-area="Admin"
+                                   asp-controller="Customer"
+                                   asp-action="List">
+                                    Đặt lại
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </aside>
+
+                <main class="admin-customer-listbox">
+                    <div class="admin-customer-toolbar">
+                        <button type="button"
+                                class="admin-customer-filter-toggle"
+                                id="customerFilterToggle"
+                                title="Bộ lọc">
+                            <span class="admin-customer-filter-icon"></span>
+                        </button>
+
+                        <a asp-area="Admin"
+                           asp-controller="Customer"
+                           asp-action="Create"
+                           class="admin-customer-add-inline">
+                            <span>+</span>
+                            <span>Thêm mới...</span>
+                        </a>
+                    </div>
+
+                    <div class="admin-customer-table-wrap">
+                        <table class="admin-customer-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:44px;">
+                                        <input type="checkbox" id="customerSelectAll" />
+                                    </th>
+                                    <th>Khách hàng</th>
+                                    <th>Số điện thoại</th>
+                                    <th>Vai trò</th>
+                                    <th class="text-center">Đơn hàng</th>
+                                    <th class="text-end">Đã mua</th>
+                                    <th class="text-center">Giỏ hàng</th>
+                                    <th class="text-center">Trạng thái</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @if (Model.Items.Any())
+                                {
+                                    foreach (var item in Model.Items)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="customer-row-check" value="@item.Id" />
+                                            </td>
+
+                                            <td>
+                                                <a asp-area="Admin"
+                                                   asp-controller="Customer"
+                                                   asp-action="Edit"
+                                                   asp-route-id="@item.Id"
+                                                   class="admin-customer-name">
+                                                    @item.Email
+                                                </a>
+
+                                                <span class="admin-customer-sub">
+                                                    @item.FullName
+                                                </span>
+                                            </td>
+
+                                            <td>
+                                                @(string.IsNullOrWhiteSpace(item.PhoneNumber) ? "Chưa có" : item.PhoneNumber)
+                                            </td>
+
+                                            <td>
+                                                @item.RolesText
+                                            </td>
+
+                                            <td class="text-center">
+                                                <span class="admin-customer-badge">@item.OrderCount</span>
+                                            </td>
+
+                                            <td class="text-end">
+                                                @item.TotalSpent.ToString("N0") đ
+                                            </td>
+
+                                            <td class="text-center">
+                                                <span class="admin-customer-badge">@item.CartItemCount</span>
+                                            </td>
+
+                                            <td class="text-center">
+                                                <form asp-area="Admin"
+                                                      asp-controller="Customer"
+                                                      asp-action="ToggleActive"
+                                                      asp-route-id="@item.Id"
+                                                      method="post">
+                                                    @Html.AntiForgeryToken()
+
+                                                    <button type="submit"
+                                                            class="admin-customer-pill @(item.IsActive ? "on" : "off")">
+                                                        @(item.IsActive ? "Hoạt động" : "Đang khóa")
+                                                    </button>
+                                                </form>
+                                            </td>
+
+                                            <td class="text-end">
+                                                <div class="admin-customer-row-actions">
+                                                    <a asp-area="Admin"
+                                                       asp-controller="Customer"
+                                                       asp-action="Edit"
+                                                       asp-route-id="@item.Id"
+                                                       class="admin-customer-mini-btn">
+                                                        Sửa
+                                                    </a>
+
+                                                    <form asp-area="Admin"
+                                                          asp-controller="Customer"
+                                                          asp-action="Delete"
+                                                          asp-route-id="@item.Id"
+                                                          method="post"
+                                                          onsubmit="return confirm('Bạn có chắc muốn xóa khách hàng này không? Nếu khách đã có đơn hàng, hệ thống sẽ chỉ khóa tài khoản để giữ dữ liệu.');">
+                                                        @Html.AntiForgeryToken()
+
+                                                        <button type="submit" class="admin-customer-mini-btn danger">
+                                                            Xóa
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="9" class="admin-customer-empty">
+                                            Không tìm thấy khách hàng nào.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="admin-customer-footer">
+                        <div class="admin-customer-pager">
+                            <a asp-area="Admin"
+                               asp-controller="Customer"
+                               asp-action="List"
+                               asp-route-search="@Model.Search"
+                               asp-route-role="@Model.Role"
+                               asp-route-active="@Model.Active"
+                               asp-route-page="1"
+                               asp-route-pageSize="@Model.PageSize">«</a>
+
+                            <a asp-area="Admin"
+                               asp-controller="Customer"
+                               asp-action="List"
+                               asp-route-search="@Model.Search"
+                               asp-route-role="@Model.Role"
+                               asp-route-active="@Model.Active"
+                               asp-route-page="@(Model.Page > 1 ? Model.Page - 1 : 1)"
+                               asp-route-pageSize="@Model.PageSize">‹</a>
+
+                            <span>@Model.Page</span>
+
+                            <a asp-area="Admin"
+                               asp-controller="Customer"
+                               asp-action="List"
+                               asp-route-search="@Model.Search"
+                               asp-route-role="@Model.Role"
+                               asp-route-active="@Model.Active"
+                               asp-route-page="@(Model.Page < Model.TotalPages ? Model.Page + 1 : Model.TotalPages)"
+                               asp-route-pageSize="@Model.PageSize">›</a>
+
+                            <a asp-area="Admin"
+                               asp-controller="Customer"
+                               asp-action="List"
+                               asp-route-search="@Model.Search"
+                               asp-route-role="@Model.Role"
+                               asp-route-active="@Model.Active"
+                               asp-route-page="@Model.TotalPages"
+                               asp-route-pageSize="@Model.PageSize">»</a>
+                        </div>
+
+                        <div>
+                            Đang hiển thị @Model.Items.Count / @Model.TotalItems khách hàng
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const manager = document.getElementById("adminCustomerManager");
+            const filterBtn = document.getElementById("customerFilterToggle");
+
+            if (manager && filterBtn) {
+                filterBtn.addEventListener("click", function () {
+                    manager.classList.toggle("filter-open");
+                    filterBtn.classList.toggle("active");
+                });
+            }
+
+            const selectAll = document.getElementById("customerSelectAll");
+
+            if (selectAll) {
+                selectAll.addEventListener("change", function () {
+                    document.querySelectorAll(".customer-row-check").forEach(function (checkbox) {
+                        checkbox.checked = selectAll.checked;
+                    });
+                });
+            }
+        });
+    </script>
+}

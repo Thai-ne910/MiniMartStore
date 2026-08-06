@@ -1,0 +1,72 @@
+﻿@using MiniSmartstoreMvc.Models
+@model MiniSmartstoreMvc.ViewModels.CheckoutPaymentViewModel
+
+@{
+    ViewData["Title"] = "Phương thức thanh toán";
+}
+
+<div class="container checkout-smart-page">
+    <partial name="_CheckoutProgress" model="4" />
+
+    <div class="checkout-two-column">
+        <main>
+            <h1 class="checkout-main-title">Chọn phương thức thanh toán</h1>
+
+            <form asp-action="PaymentMethod" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="checkout-method-list payment-method-list">
+                    <label class="checkout-method-item">
+                        <input type="radio"
+                               name="selectedPaymentMethod"
+                               value="@PaymentMethod.CashOnDelivery"
+                        @(Model.SelectedPaymentMethod == PaymentMethod.CashOnDelivery ? "checked" : "") />
+
+                        <div class="payment-icon-box">💵</div>
+
+                        <div>
+                            <strong>Thanh toán khi nhận hàng</strong>
+                            <p>Khách hàng thanh toán trực tiếp khi nhận sản phẩm.</p>
+                        </div>
+                    </label>
+
+                    <label class="checkout-method-item">
+                        <input type="radio"
+                               name="selectedPaymentMethod"
+                               value="@PaymentMethod.BankTransfer"
+                        @(Model.SelectedPaymentMethod == PaymentMethod.BankTransfer ? "checked" : "") />
+
+                        <div class="payment-icon-box">🏦</div>
+
+                        <div>
+                            <strong>Chuyển khoản ngân hàng</strong>
+                            <p>Nhân viên sẽ liên hệ để xác nhận thông tin chuyển khoản.</p>
+                        </div>
+                    </label>
+
+                    <label class="checkout-method-item">
+                        <input type="radio"
+                               name="selectedPaymentMethod"
+                               value="@PaymentMethod.OnlinePaymentComingSoon"
+                        @(Model.SelectedPaymentMethod == PaymentMethod.OnlinePaymentComingSoon ? "checked" : "") />
+
+                        <div class="payment-icon-box">💳</div>
+
+                        <div>
+                            <strong>Thanh toán online</strong>
+                            <p>Chức năng thanh toán online đang được phát triển.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <button type="submit" class="checkout-primary-btn mt-4">
+                    Tiếp tục <span>›</span>
+                </button>
+            </form>
+        </main>
+
+        <aside>
+            <partial name="_CheckoutSummary" model="Model" />
+        </aside>
+    </div>
+</div>

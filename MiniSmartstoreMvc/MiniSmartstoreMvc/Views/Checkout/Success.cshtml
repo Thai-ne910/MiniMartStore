@@ -1,0 +1,99 @@
+﻿@using MiniSmartstoreMvc.Models
+@model MiniSmartstoreMvc.Models.Order
+
+@{
+    ViewData["Title"] = "Đặt hàng thành công";
+}
+
+<div class="container mt-4">
+    <div class="success-box text-center">
+        <div class="success-icon">✓</div>
+        <h1>Đặt hàng thành công!</h1>
+        <p>Cảm ơn bạn đã mua hàng tại MiniSmartstore.</p>
+
+        <h5>Mã đơn hàng: <strong>@Model.OrderCode</strong></h5>
+
+        <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-primary mt-3">
+            Xem chi tiết đơn hàng
+        </a>
+
+        <a asp-controller="Product" asp-action="Index" class="btn btn-outline-primary mt-3">
+            Tiếp tục mua sắm
+        </a>
+    </div>
+
+    <div class="checkout-card mt-4">
+        <h4>Thông tin giao hàng</h4>
+
+        <p><strong>Người nhận:</strong> @Model.CustomerName</p>
+        <p><strong>Số điện thoại:</strong> @Model.PhoneNumber</p>
+        <p><strong>Địa chỉ:</strong> @Model.ShippingAddress</p>
+        <p><strong>Phương thức giao hàng:</strong> @(Model.ShippingMethodName ?? Model.ShippingMethod?.Name)</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.OrderNote))
+        {
+            <p><strong>Ghi chú:</strong> @Model.OrderNote</p>
+        }
+    </div>
+
+    <div class="checkout-card mt-4">
+        <h4>Sản phẩm đã đặt</h4>
+
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Số lượng</th>
+                        <th>Đơn giá</th>
+                        <th>Thành tiền</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model.OrderDetails ?? new List<OrderDetail>())
+                    {
+                        <tr>
+                            <td>@item.Product?.Name</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.UnitPrice.ToString("N0") đ</td>
+                            <td class="text-danger fw-bold">@item.TotalPrice.ToString("N0") đ</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="order-summary mt-3">
+            <div class="summary-row">
+                <span>Tạm tính</span>
+                <strong>@Model.SubTotalAmount.ToString("N0") đ</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Phí vận chuyển</span>
+                <strong>@Model.ShippingFee.ToString("N0") đ</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Giảm giá</span>
+                <strong class="text-success">-@Model.DiscountAmount.ToString("N0") đ</strong>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.CouponCode))
+            {
+                <div class="summary-row">
+                    <span>Mã giảm giá</span>
+                    <strong>@Model.CouponCode</strong>
+                </div>
+            }
+
+            <hr />
+
+            <div class="summary-total">
+                <span>Tổng thanh toán</span>
+                <strong>@Model.TotalAmount.ToString("N0") đ</strong>
+            </div>
+        </div>
+    </div>
+</div>

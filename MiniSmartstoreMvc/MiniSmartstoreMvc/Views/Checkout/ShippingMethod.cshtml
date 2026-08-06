@@ -1,0 +1,56 @@
+﻿@model MiniSmartstoreMvc.ViewModels.CheckoutShippingViewModel
+
+@{
+    ViewData["Title"] = "Phương thức giao hàng";
+}
+
+<div class="container checkout-smart-page">
+    <partial name="_CheckoutProgress" model="3" />
+
+    <div class="checkout-two-column">
+        <main>
+            <h1 class="checkout-main-title">Chọn phương thức giao hàng</h1>
+
+            <form asp-action="ShippingMethod" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="checkout-method-list">
+                    <label class="checkout-method-item">
+                        <input type="radio" name="selectedShippingMethod" value="pickup" @(Model.SelectedShippingMethod == "pickup" ? "checked" : "") />
+                        <div>
+                            <strong>Nhận hàng tại cửa hàng</strong>
+                            <p>Khách hàng đến cửa hàng để nhận sản phẩm.</p>
+                        </div>
+                        <span>0 đ</span>
+                    </label>
+
+                    <label class="checkout-method-item">
+                        <input type="radio" name="selectedShippingMethod" value="standard" @(Model.SelectedShippingMethod == "standard" ? "checked" : "") />
+                        <div>
+                            <strong>Giao hàng tiêu chuẩn</strong>
+                            <p>Giao hàng trong 3 - 5 ngày làm việc.</p>
+                        </div>
+                        <span>30.000 đ</span>
+                    </label>
+
+                    <label class="checkout-method-item">
+                        <input type="radio" name="selectedShippingMethod" value="express" @(Model.SelectedShippingMethod == "express" ? "checked" : "") />
+                        <div>
+                            <strong>Giao hàng nhanh</strong>
+                            <p>Giao hàng trong 1 - 2 ngày làm việc.</p>
+                        </div>
+                        <span>60.000 đ</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="checkout-primary-btn mt-4">
+                    Tiếp tục <span>›</span>
+                </button>
+            </form>
+        </main>
+
+        <aside>
+            <partial name="_CheckoutSummary" model="Model" />
+        </aside>
+    </div>
+</div>

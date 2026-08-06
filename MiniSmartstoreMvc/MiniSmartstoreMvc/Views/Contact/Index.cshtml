@@ -1,0 +1,100 @@
+﻿@model MiniSmartstoreMvc.ViewModels.ContactViewModel
+
+@{
+    ViewData["Title"] = "Liên hệ";
+}
+
+<div class="container ss-contact-page">
+    <div class="ss-contact-layout">
+        <section class="ss-contact-intro">
+            <h1>Liên hệ</h1>
+
+            <p>
+                Bạn cần hỗ trợ về sản phẩm, đơn hàng hoặc tài khoản?
+                Hãy gửi thông tin liên hệ cho MiniSmartstore, chúng tôi sẽ phản hồi trong thời gian sớm nhất.
+            </p>
+
+            <div class="ss-contact-info">
+                <div>
+                    <strong>Hotline</strong>
+                    <span>0900 000 000</span>
+                </div>
+
+                <div>
+                    <strong>Email</strong>
+                    <span>admin@mini.com</span>
+                </div>
+
+                <div>
+                    <strong>Địa chỉ</strong>
+                    <span>300A Nguyễn Tất Thành, TP. Hồ Chí Minh</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="ss-contact-form-panel">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["Success"]
+                </div>
+            }
+
+            <form asp-controller="Contact"
+                  asp-action="Index"
+                  method="post"
+                  class="ss-contact-form">
+
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="ss-floating-field">
+                    <label>Họ tên</label>
+                    <input asp-for="FullName"
+                           class="form-control"
+                           placeholder="Nhập họ tên của bạn" />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+
+                <div class="ss-floating-field">
+                    <label>Email</label>
+                    <input asp-for="Email"
+                           class="form-control"
+                           placeholder="Nhập email của bạn" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="ss-floating-field">
+                    <label>Nội dung liên hệ *</label>
+                    <textarea asp-for="Message"
+                              class="form-control"
+                              rows="8"
+                              placeholder="Nhập nội dung bạn cần hỗ trợ..."></textarea>
+                    <span asp-validation-for="Message" class="text-danger"></span>
+                </div>
+
+                <p class="ss-contact-note">
+                    * Các trường có dấu sao là bắt buộc.
+                </p>
+
+                <label class="ss-contact-policy">
+                    <input asp-for="AgreePolicy" />
+                    <span>
+                        Tôi đồng ý để MiniSmartstore lưu thông tin nhằm xử lý yêu cầu liên hệ.
+                    </span>
+                </label>
+
+                <span asp-validation-for="AgreePolicy" class="text-danger d-block mb-3"></span>
+
+                <button type="submit" class="ss-submit-btn">
+                    Gửi liên hệ
+                </button>
+            </form>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,144 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminProductReportViewModel
+
+@{
+    ViewData["Title"] = "Báo cáo sản phẩm";
+}
+
+<div class="admin-report-page">
+    <div class="admin-report-shell">
+        <div class="admin-report-header">
+            <div class="admin-report-title">
+                <h1>Báo cáo sản phẩm</h1>
+                <p>Thống kê sản phẩm bán chạy theo số lượng hoặc theo doanh thu.</p>
+            </div>
+
+            <div class="admin-report-tabs">
+                <a asp-area="Admin" asp-controller="Report" asp-action="Index">Tổng quan</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Sales">Doanh thu</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Products" class="active">Sản phẩm</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Customers">Khách hàng</a>
+                <a asp-area="Admin" asp-controller="Report" asp-action="Inventory">Tồn kho</a>
+            </div>
+        </div>
+
+        <form method="get" class="admin-report-filter">
+            <div class="admin-report-field">
+                <label>Từ ngày</label>
+                <input type="date" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="admin-report-control" />
+            </div>
+
+            <div class="admin-report-field">
+                <label>Đến ngày</label>
+                <input type="date" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="admin-report-control" />
+            </div>
+
+            <div class="admin-report-switch">
+                <a asp-area="Admin"
+                   asp-controller="Report"
+                   asp-action="Products"
+                   asp-route-sortBy="quantity"
+                   asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                   asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                   class="@(Model.SortBy == "quantity" ? "active" : "")">
+                    Theo số lượng
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Report"
+                   asp-action="Products"
+                   asp-route-sortBy="amount"
+                   asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                   asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                   class="@(Model.SortBy == "amount" ? "active" : "")">
+                    Theo doanh thu
+                </a>
+            </div>
+
+            <input type="hidden" name="sortBy" value="@Model.SortBy" />
+
+            <button type="submit" class="admin-report-primary-btn">Lọc báo cáo</button>
+
+            <a asp-area="Admin" asp-controller="Report" asp-action="Products" class="admin-report-secondary-btn">
+                Đặt lại
+            </a>
+        </form>
+
+        <div class="admin-report-body">
+            <div class="admin-report-stats">
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Sản phẩm có doanh số</div>
+                    <div class="admin-report-stat-value">@Model.TotalProducts</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tổng số lượng bán</div>
+                    <div class="admin-report-stat-value">@Model.TotalSoldQuantity</div>
+                </div>
+
+                <div class="admin-report-stat">
+                    <div class="admin-report-stat-label">Tổng doanh thu</div>
+                    <div class="admin-report-stat-value">@Model.TotalRevenue.ToString("N0") đ</div>
+                </div>
+            </div>
+
+            <div class="admin-report-card">
+                <div class="admin-report-card-header">
+                    <div>
+                        <h2>Danh sách sản phẩm</h2>
+                        <p>Sắp xếp theo @(Model.SortBy == "amount" ? "doanh thu" : "số lượng bán").</p>
+                    </div>
+                </div>
+
+                <div class="admin-report-table-wrap">
+                    <table class="admin-report-table">
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>Danh mục</th>
+                                <th>Đã bán</th>
+                                <th>Doanh thu</th>
+                                <th>Tồn kho</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Any())
+                            {
+                                foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-area="Admin" asp-controller="Product" asp-action="Edit" asp-route-id="@item.ProductId" class="admin-report-link">
+                                                @item.ProductName
+                                            </a>
+                                        </td>
+                                        <td>@item.CategoryName</td>
+                                        <td><span class="admin-report-badge">@item.SoldQuantity</span></td>
+                                        <td class="admin-report-money">@item.Revenue.ToString("N0") đ</td>
+                                        <td><span class="admin-report-badge">@item.StockQuantity</span></td>
+                                        <td>
+                                            @if (item.IsActive)
+                                            {
+                                                <span class="admin-report-pill success">Đang hiển thị</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="admin-report-pill hidden">Đang ẩn</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="admin-report-empty">Chưa có sản phẩm nào phát sinh doanh số.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

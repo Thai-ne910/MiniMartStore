@@ -1,0 +1,541 @@
+﻿@using MiniSmartstoreMvc.Models
+@model List<MiniSmartstoreMvc.ViewModels.AdminOrderListItemViewModel>
+
+@{
+    ViewData["Title"] = "Quản lý đơn hàng";
+
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int pageSize = ViewBag.PageSize ?? 25;
+    int totalItems = ViewBag.TotalItems ?? 0;
+    bool filterOpen = ViewBag.FilterOpen ?? false;
+
+    string? search = ViewBag.Search as string;
+
+    string? createdFrom = ViewBag.CreatedFrom as string;
+    string? createdTo = ViewBag.CreatedTo as string;
+    string? customerName = ViewBag.CustomerName as string;
+    string? email = ViewBag.Email as string;
+    string? orderCode = ViewBag.OrderCode as string;
+
+    string? currentOrderStatus = ViewBag.OrderStatus?.ToString();
+    string? currentPaymentStatus = ViewBag.PaymentStatus?.ToString();
+}
+
+<div class="admin-order-page">
+    <div class="admin-order-card">
+        <div class="admin-order-header">
+            <div>
+                <h1>Quản lý đơn hàng</h1>
+                <p>Theo dõi đơn hàng, cập nhật trạng thái xử lý và trạng thái thanh toán.</p>
+            </div>
+
+            <form asp-area="Admin"
+                  asp-controller="Order"
+                  asp-action="List"
+                  method="get"
+                  class="admin-order-search">
+
+                <input type="text"
+                       name="search"
+                       value="@search"
+                       placeholder="Tìm theo mã đơn, tên khách, email..." />
+
+                <button type="submit">
+                    <span class="admin-css-icon admin-icon-search"></span>
+                </button>
+            </form>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-alert admin-alert-success">
+                @TempData["Success"]
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-alert admin-alert-danger">
+                @TempData["Error"]
+            </div>
+        }
+
+        <div class="admin-order-toolbar">
+            <button type="button"
+                    class="admin-filter-btn"
+                    id="orderFilterToggle"
+                    title="Bộ lọc">
+                <span class="admin-css-icon admin-icon-filter"></span>
+            </button>
+
+            <div class="admin-export-wrapper">
+                <button type="button"
+                        class="admin-export-btn"
+                        id="pdfExportToggle">
+                    Xuất PDF
+                    <span class="admin-export-arrow"></span>
+                </button>
+
+                <div class="admin-export-menu" id="pdfExportMenu">
+                    <button type="button"
+                            class="admin-export-menu-item"
+                            id="exportSelectedPdf">
+                        Xuất PDF đơn hàng đã chọn
+                    </button>
+
+                    <a class="admin-export-menu-item"
+                       asp-area="Admin"
+                       asp-controller="Order"
+                       asp-action="Print"
+                       target="_blank">
+                        Xuất PDF tất cả đơn hàng
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-order-manager @(filterOpen ? "filter-open" : "")" id="adminOrderManager">
+            <aside class="admin-order-filter-panel">
+                <form asp-area="Admin"
+                      asp-controller="Order"
+                      asp-action="List"
+                      method="get">
+
+                    <input type="hidden" name="filterOpen" value="true" />
+
+                    <h3>Bộ lọc</h3>
+
+                    <div class="admin-filter-group">
+                        <label>Ngày tạo</label>
+                        <div class="admin-filter-row">
+                            <input type="date"
+                                   name="createdFrom"
+                                   value="@createdFrom" />
+
+                            <input type="date"
+                                   name="createdTo"
+                                   value="@createdTo" />
+                        </div>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Tên khách hàng</label>
+                        <input type="text"
+                               name="customerName"
+                               value="@customerName"
+                               placeholder="Nhập tên khách hàng" />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Email thanh toán</label>
+                        <input type="text"
+                               name="email"
+                               value="@email"
+                               placeholder="Nhập email" />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Mã đơn hàng</label>
+                        <input type="text"
+                               name="orderCode"
+                               value="@orderCode"
+                               placeholder="Nhập mã đơn hàng" />
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Trạng thái đơn hàng</label>
+                        <select name="orderStatus">
+                            <option value="">Tất cả</option>
+                            <option value="@OrderStatus.Pending"
+                                    selected="@(currentOrderStatus == OrderStatus.Pending.ToString() ? "selected" : null)">
+                                Chờ xử lý
+                            </option>
+                            <option value="@OrderStatus.Processing"
+                                    selected="@(currentOrderStatus == OrderStatus.Processing.ToString() ? "selected" : null)">
+                                Đang xử lý
+                            </option>
+                            <option value="@OrderStatus.Completed"
+                                    selected="@(currentOrderStatus == OrderStatus.Completed.ToString() ? "selected" : null)">
+                                Hoàn thành
+                            </option>
+                            <option value="@OrderStatus.Cancelled"
+                                    selected="@(currentOrderStatus == OrderStatus.Cancelled.ToString() ? "selected" : null)">
+                                Đã hủy
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-group">
+                        <label>Trạng thái thanh toán</label>
+                        <select name="paymentStatus">
+                            <option value="">Tất cả</option>
+                            <option value="@PaymentStatus.Pending"
+                                    selected="@(currentPaymentStatus == PaymentStatus.Pending.ToString() ? "selected" : null)">
+                                Chờ thanh toán
+                            </option>
+                            <option value="@PaymentStatus.Paid"
+                                    selected="@(currentPaymentStatus == PaymentStatus.Paid.ToString() ? "selected" : null)">
+                                Đã thanh toán
+                            </option>
+                            <option value="@PaymentStatus.Failed"
+                                    selected="@(currentPaymentStatus == PaymentStatus.Failed.ToString() ? "selected" : null)">
+                                Thất bại
+                            </option>
+                            <option value="@PaymentStatus.Cancelled"
+                                    selected="@(currentPaymentStatus == PaymentStatus.Cancelled.ToString() ? "selected" : null)">
+                                Đã hủy
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="admin-filter-actions">
+                        <button type="submit" class="admin-filter-submit">
+                            Áp dụng bộ lọc
+                        </button>
+
+                        <a asp-area="Admin"
+                           asp-controller="Order"
+                           asp-action="List"
+                           class="admin-filter-reset">
+                            Đặt lại
+                        </a>
+                    </div>
+                </form>
+            </aside>
+
+            <section class="admin-order-table-section">
+                <div class="admin-order-table-wrap">
+                    <table class="admin-order-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 48px;">
+                                    <input type="checkbox" id="orderSelectAll" />
+                                </th>
+                                <th style="width: 130px;">Mã đơn</th>
+                                <th>Khách hàng</th>
+                                <th>Giao hàng</th>
+                                <th style="width: 150px;">Ngày đặt</th>
+                                <th style="width: 145px;">Trạng thái</th>
+                                <th style="width: 145px;">Thanh toán</th>
+                                <th style="width: 160px;" class="text-end">Tổng tiền</th>
+                                <th style="width: 70px;"></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @if (Model.Any())
+                            {
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox"
+                                                   class="admin-order-check"
+                                                   value="@item.Id" />
+                                        </td>
+
+                                        <td>
+                                            <a asp-area="Admin"
+                                               asp-controller="Order"
+                                               asp-action="Details"
+                                               asp-route-id="@item.Id"
+                                               class="admin-order-code">
+                                                #@item.Id
+                                            </a>
+
+                                            <small>@item.OrderCode</small>
+                                        </td>
+
+                                        <td>
+                                            <a asp-area="Admin"
+                                               asp-controller="Order"
+                                               asp-action="Details"
+                                               asp-route-id="@item.Id"
+                                               class="admin-order-customer">
+                                                @item.CustomerName
+                                            </a>
+
+                                            <small>@item.CustomerEmail</small>
+                                        </td>
+
+                                        <td>
+                                            <div class="admin-shipping-cell">
+                                                <span class="admin-shipping-dot"></span>
+                                                <span>@item.ShippingAddress</span>
+                                            </div>
+
+                                            <small>Nhận hàng sau 3 - 5 ngày</small>
+                                        </td>
+
+                                        <td>
+                                            <span>@item.CreatedAt.ToString("dd/MM/yyyy")</span>
+                                            <small>@item.CreatedAt.ToString("HH:mm")</small>
+                                        </td>
+
+                                        <td>
+                                            <span class="admin-order-status @GetOrderStatusClass(item.OrderStatus)">
+                                                @GetOrderStatusText(item.OrderStatus)
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <span class="admin-payment-status @GetPaymentStatusClass(item.PaymentStatus)">
+                                                @GetPaymentStatusText(item.PaymentStatus)
+                                            </span>
+                                        </td>
+
+                                        <td class="text-end">
+                                            <strong>@item.TotalAmount.ToString("N0") đ</strong>
+                                            <small>@item.TotalQuantity sản phẩm</small>
+                                        </td>
+
+                                        <td class="text-end">
+                                            <div class="dropdown">
+                                                <button type="button"
+                                                        class="admin-more-btn"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
+                                                    <span class="admin-css-icon admin-icon-more"></span>
+                                                </button>
+
+                                                <ul class="dropdown-menu dropdown-menu-end admin-row-menu">
+                                                    <li>
+                                                        <a class="dropdown-item"
+                                                           asp-area="Admin"
+                                                           asp-controller="Order"
+                                                           asp-action="Details"
+                                                           asp-route-id="@item.Id">
+                                                            Xem chi tiết
+                                                        </a>
+                                                    </li>
+
+                                                    <li>
+                                                        <form asp-area="Admin"
+                                                              asp-controller="Order"
+                                                              asp-action="QuickComplete"
+                                                              asp-route-id="@item.Id"
+                                                              method="post">
+                                                            @Html.AntiForgeryToken()
+
+                                                            <button type="submit" class="dropdown-item">
+                                                                Đánh dấu hoàn thành
+                                                            </button>
+                                                        </form>
+                                                    </li>
+
+                                                    <li>
+                                                        <form asp-area="Admin"
+                                                              asp-controller="Order"
+                                                              asp-action="QuickCancel"
+                                                              asp-route-id="@item.Id"
+                                                              method="post"
+                                                              onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng này không?');">
+                                                            @Html.AntiForgeryToken()
+
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                Hủy đơn hàng
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="9" class="admin-empty-row">
+                                        Không tìm thấy đơn hàng nào.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="admin-order-footer">
+                    <div class="admin-pagination">
+                        <a class="admin-page-btn"
+                           asp-area="Admin"
+                           asp-controller="Order"
+                           asp-action="List"
+                           asp-route-pageSize="@pageSize">
+                            <span class="admin-css-icon admin-icon-refresh"></span>
+                        </a>
+
+                        <a class="admin-page-btn @(currentPage <= 1 ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="Order"
+                           asp-action="List"
+                           asp-route-page="@(currentPage - 1)"
+                           asp-route-pageSize="@pageSize">
+                            ‹
+                        </a>
+
+                        <span class="admin-page-btn active">@currentPage</span>
+
+                        <a class="admin-page-btn @(currentPage >= totalPages ? "disabled" : "")"
+                           asp-area="Admin"
+                           asp-controller="Order"
+                           asp-action="List"
+                           asp-route-page="@(currentPage + 1)"
+                           asp-route-pageSize="@pageSize">
+                            ›
+                        </a>
+                    </div>
+
+                    <div class="admin-footer-info">
+                        <span>Đang hiển thị trang @currentPage / @totalPages — tổng @totalItems đơn hàng</span>
+
+                        <form asp-area="Admin"
+                              asp-controller="Order"
+                              asp-action="List"
+                              method="get">
+                            <select name="pageSize"
+                                    onchange="this.form.submit()"
+                                    class="admin-page-size">
+                                <option value="10" selected="@(pageSize == 10 ? "selected" : null)">10 dòng / trang</option>
+                                <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25 dòng / trang</option>
+                                <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50 dòng / trang</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetOrderStatusText(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "Chờ xử lý",
+            OrderStatus.Processing => "Đang xử lý",
+            OrderStatus.Completed => "Hoàn thành",
+            OrderStatus.Cancelled => "Đã hủy",
+            _ => "Không xác định"
+        };
+    }
+
+    string GetPaymentStatusText(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Pending => "Chờ thanh toán",
+            PaymentStatus.Paid => "Đã thanh toán",
+            PaymentStatus.Failed => "Thất bại",
+            PaymentStatus.Cancelled => "Đã hủy",
+            _ => "Không xác định"
+        };
+    }
+
+    string GetOrderStatusClass(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "pending",
+            OrderStatus.Processing => "processing",
+            OrderStatus.Completed => "completed",
+            OrderStatus.Cancelled => "cancelled",
+            _ => "pending"
+        };
+    }
+
+    string GetPaymentStatusClass(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Pending => "pending",
+            PaymentStatus.Paid => "paid",
+            PaymentStatus.Failed => "failed",
+            PaymentStatus.Cancelled => "cancelled",
+            _ => "pending"
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Mở / đóng bộ lọc bên trái
+            const manager = document.getElementById("adminOrderManager");
+            const filterBtn = document.getElementById("orderFilterToggle");
+
+            if (manager && filterBtn) {
+                filterBtn.addEventListener("click", function () {
+                    manager.classList.toggle("filter-open");
+                    filterBtn.classList.toggle("active");
+                });
+            }
+
+            // Chọn tất cả đơn hàng
+            const selectAll = document.getElementById("orderSelectAll");
+
+            if (selectAll) {
+                selectAll.addEventListener("change", function () {
+                    document.querySelectorAll(".admin-order-check").forEach(function (checkbox) {
+                        checkbox.checked = selectAll.checked;
+                    });
+                });
+            }
+
+            // Mở / đóng menu Xuất PDF
+            const pdfToggle = document.getElementById("pdfExportToggle");
+            const pdfMenu = document.getElementById("pdfExportMenu");
+
+            if (pdfToggle && pdfMenu) {
+                pdfToggle.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                    pdfMenu.classList.toggle("show");
+                    pdfToggle.classList.toggle("active");
+                });
+
+                document.addEventListener("click", function () {
+                    pdfMenu.classList.remove("show");
+                    pdfToggle.classList.remove("active");
+                });
+
+                pdfMenu.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                });
+            }
+
+            // Xuất PDF các đơn đã chọn
+            const exportSelectedBtn = document.getElementById("exportSelectedPdf");
+
+            if (exportSelectedBtn) {
+                exportSelectedBtn.addEventListener("click", function () {
+                    const ids = Array.from(document.querySelectorAll(".admin-order-check:checked"))
+                        .map(function (x) {
+                            return x.value;
+                        });
+
+                    if (ids.length === 0) {
+                        alert("Vui lòng chọn ít nhất một đơn hàng để xuất PDF.");
+                        return;
+                    }
+
+                    const baseUrl = '@Url.Action("PrintSelected", "Order", new { area = "Admin" })';
+                    const query = ids.map(function (id) {
+                        return "ids=" + encodeURIComponent(id);
+                    }).join("&");
+
+                    window.open(baseUrl + "?" + query, "_blank");
+
+                    if (pdfMenu) {
+                        pdfMenu.classList.remove("show");
+                    }
+
+                    if (pdfToggle) {
+                        pdfToggle.classList.remove("active");
+                    }
+                });
+            }
+        });
+    </script>
+}

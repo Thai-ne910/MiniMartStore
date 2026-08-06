@@ -1,0 +1,139 @@
+﻿@using MiniSmartstoreMvc.Models
+@model MiniSmartstoreMvc.ViewModels.AdminOrderDetailViewModel
+
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    var order = Model.Order;
+}
+
+<div class="admin-order-detail-page">
+    <div class="admin-order-detail-card">
+        <div class="admin-order-detail-header">
+            <div>
+                <a asp-area="Admin"
+                   asp-controller="Order"
+                   asp-action="List"
+                   class="admin-back-btn">
+                    ←
+                </a>
+
+                <h1>Chi tiết đơn hàng #@order.Id</h1>
+                <p>Mã đơn: @order.OrderCode</p>
+            </div>
+
+            <div class="admin-order-detail-total">
+                <span>Tổng tiền</span>
+                <strong>@order.TotalAmount.ToString("N0") đ</strong>
+            </div>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-alert admin-alert-success">
+                @TempData["Success"]
+            </div>
+        }
+
+        <div class="admin-order-detail-grid">
+            <section class="admin-order-info-box">
+                <h2>Thông tin khách hàng</h2>
+
+                <p><strong>Họ tên:</strong> @order.CustomerName</p>
+                <p><strong>Email:</strong> @Model.CustomerEmail</p>
+                <p><strong>Số điện thoại:</strong> @order.PhoneNumber</p>
+                <p><strong>Địa chỉ:</strong> @order.ShippingAddress</p>
+                <p><strong>Ngày đặt:</strong> @order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+            </section>
+
+            <section class="admin-order-info-box">
+                <h2>Cập nhật trạng thái</h2>
+
+                <form asp-area="Admin"
+                      asp-controller="Order"
+                      asp-action="UpdateOrderStatus"
+                      asp-route-id="@order.Id"
+                      method="post"
+                      class="admin-status-form">
+
+                    @Html.AntiForgeryToken()
+
+                    <label>Trạng thái đơn hàng</label>
+                    <select name="orderStatus">
+                        <option value="@OrderStatus.Pending" selected="@(order.OrderStatus == OrderStatus.Pending ? "selected" : null)">Chờ xử lý</option>
+                        <option value="@OrderStatus.Processing" selected="@(order.OrderStatus == OrderStatus.Processing ? "selected" : null)">Đang xử lý</option>
+                        <option value="@OrderStatus.Completed" selected="@(order.OrderStatus == OrderStatus.Completed ? "selected" : null)">Hoàn thành</option>
+                        <option value="@OrderStatus.Cancelled" selected="@(order.OrderStatus == OrderStatus.Cancelled ? "selected" : null)">Đã hủy</option>
+                    </select>
+
+                    <button type="submit">Lưu trạng thái đơn</button>
+                </form>
+
+                <form asp-area="Admin"
+                      asp-controller="Order"
+                      asp-action="UpdatePaymentStatus"
+                      asp-route-id="@order.Id"
+                      method="post"
+                      class="admin-status-form">
+
+                    @Html.AntiForgeryToken()
+
+                    <label>Trạng thái thanh toán</label>
+                    <select name="paymentStatus">
+                        <option value="@PaymentStatus.Pending" selected="@(order.PaymentStatus == PaymentStatus.Pending ? "selected" : null)">Chờ thanh toán</option>
+                        <option value="@PaymentStatus.Paid" selected="@(order.PaymentStatus == PaymentStatus.Paid ? "selected" : null)">Đã thanh toán</option>
+                        <option value="@PaymentStatus.Failed" selected="@(order.PaymentStatus == PaymentStatus.Failed ? "selected" : null)">Thất bại</option>
+                        <option value="@PaymentStatus.Cancelled" selected="@(order.PaymentStatus == PaymentStatus.Cancelled ? "selected" : null)">Đã hủy</option>
+                    </select>
+
+                    <button type="submit">Lưu trạng thái thanh toán</button>
+                </form>
+            </section>
+        </div>
+
+        <section class="admin-order-products-box">
+            <h2>Sản phẩm trong đơn</h2>
+
+            <table class="admin-order-products-table">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th style="width: 120px;">Số lượng</th>
+                        <th style="width: 160px;">Đơn giá</th>
+                        <th style="width: 160px;" class="text-end">Thành tiền</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model.OrderDetails)
+                    {
+                        <tr>
+                            <td>
+                                <div class="admin-order-product-cell">
+                                    <img src="@item.Product?.ImageUrl"
+                                         onerror="this.src='/images/products/no-image.jpg'"
+                                         alt="@item.Product?.Name" />
+
+                                    <div>
+                                        <strong>@item.Product?.Name</strong>
+                                        <span>@item.Product?.Category?.Name</span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>@item.Quantity</td>
+                            <td>@item.UnitPrice.ToString("N0") đ</td>
+                            <td class="text-end">
+                                <strong>@((item.UnitPrice * item.Quantity).ToString("N0")) đ</strong>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="admin-order-detail-summary">
+                <span>Tổng cộng:</span>
+                <strong>@order.TotalAmount.ToString("N0") đ</strong>
+            </div>
+        </section>
+    </div>
+</div>

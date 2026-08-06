@@ -1,0 +1,301 @@
+﻿@model MiniSmartstoreMvc.ViewModels.ShopDrawerViewModel
+
+@{
+    var cartItems = Model.CartItems
+        .Where(x => x.Product != null)
+        .ToList();
+
+    var cartTotal = cartItems.Sum(x => x.Product!.Price * x.Quantity);
+    var cartCount = cartItems.Sum(x => x.Quantity);
+
+    var wishlistCount = Model.WishlistProducts.Count;
+    var compareCount = Model.CompareProducts.Count;
+
+    var activeTab = Model.ActiveTab?.ToLower() ?? "cart";
+    var drawerMessage = ViewBag.DrawerMessage as string;
+}
+
+<form id="drawerAntiForgeryForm" style="display:none">
+    @Html.AntiForgeryToken()
+</form>
+
+<div class="shop-drawer-overlay" data-drawer-close></div>
+
+<aside class="shop-drawer-panel">
+    <div class="shop-drawer-header">
+        <div class="shop-drawer-tabs">
+            <button type="button"
+                    class="shop-drawer-tab @(activeTab == "cart" ? "active" : "")"
+                    data-drawer-tab="cart">
+                Giỏ hàng
+                <span>@cartCount</span>
+            </button>
+
+            <button type="button"
+                    class="shop-drawer-tab @(activeTab == "wishlist" ? "active" : "")"
+                    data-drawer-tab="wishlist">
+                Yêu thích
+                <span>@wishlistCount</span>
+            </button>
+
+            <button type="button"
+                    class="shop-drawer-tab @(activeTab == "compare" ? "active" : "")"
+                    data-drawer-tab="compare">
+                So sánh
+                <span>@compareCount</span>
+            </button>
+        </div>
+        <button type="button"
+                class="shop-drawer-close js-shop-drawer-close"
+                data-drawer-close>
+            ×
+        </button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(drawerMessage))
+    {
+        <div class="shop-drawer-alert">
+            <span>✓</span>
+            <p>@drawerMessage</p>
+            <button type="button" data-drawer-close>×</button>
+        </div>
+    }
+
+    <div class="shop-drawer-body">
+        @if (activeTab == "cart")
+        {
+            if (cartItems.Any())
+            {
+                foreach (var item in cartItems)
+                {
+                    var product = item.Product!;
+
+                    <div class="drawer-product-card">
+                        <div class="drawer-product-image">
+                            <img src="@product.ImageUrl"
+                                 alt="@product.Name"
+                                 onerror="this.src='/images/products/no-image.jpg'" />
+                        </div>
+
+                        <div class="drawer-product-content">
+                            <div class="drawer-product-top">
+                                <div>
+                                    <h4>@product.Name</h4>
+                                    <p>@product.Category?.Name</p>
+                                </div>
+
+                                <strong>@((product.Price * item.Quantity).ToString("N0")) đ</strong>
+                            </div>
+
+                            <div class="drawer-product-meta">
+                                <span>Đơn giá: @product.Price.ToString("N0") đ</span>
+                            </div>
+
+                            <div class="drawer-product-actions">
+                                <div class="drawer-qty-control">
+                                    <button type="button"
+                                            class="js-cart-qty"
+                                            data-product-id="@product.Id"
+                                            data-quantity="@(item.Quantity - 1)">
+                                        −
+                                    </button>
+
+                                    <span>@item.Quantity</span>
+
+                                    <button type="button"
+                                            class="js-cart-qty"
+                                            data-product-id="@product.Id"
+                                            data-quantity="@(item.Quantity + 1)">
+                                        +
+                                    </button>
+                                </div>
+
+                                <button type="button"
+                                        class="drawer-icon-btn js-add-wishlist"
+                                        data-product-id="@product.Id"
+                                        title="Thêm vào yêu thích">
+                                    ♡
+                                </button>
+
+                                <button type="button"
+                                        class="drawer-icon-btn danger js-cart-remove"
+                                        data-product-id="@product.Id"
+                                        title="Xóa khỏi giỏ hàng">
+                                    🗑
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="drawer-empty-state">
+                    <div class="drawer-empty-icon">🛒</div>
+                    <h3>Giỏ hàng trống</h3>
+                    <p>Bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>
+                    <a asp-controller="Product" asp-action="Index">Tiếp tục mua sắm</a>
+                </div>
+            }
+        }
+
+        @if (activeTab == "wishlist")
+        {
+            if (Model.WishlistProducts.Any())
+            {
+                foreach (var item in Model.WishlistProducts)
+                {
+                    <div class="drawer-product-card">
+                        <div class="drawer-product-image">
+                            <img src="@item.ImageUrl"
+                                 alt="@item.Name"
+                                 onerror="this.src='/images/products/no-image.jpg'" />
+                        </div>
+
+                        <div class="drawer-product-content">
+                            <div class="drawer-product-top">
+                                <div>
+                                    <h4>@item.Name</h4>
+                                    <p>@item.Category?.Name</p>
+                                </div>
+
+                                <strong>@item.Price.ToString("N0") đ</strong>
+                            </div>
+
+                            <div class="drawer-product-actions">
+                                <button type="button"
+                                        class="drawer-main-small-btn js-drawer-add-cart"
+                                        data-product-id="@item.Id">
+                                    🛒 Thêm giỏ
+                                </button>
+
+                                <button type="button"
+                                        class="drawer-icon-btn danger js-drawer-remove js-remove-wishlist"
+                                        data-url="/ShopDrawer/RemoveWishlist"
+                                        data-id="@item.Id"
+                                        data-product-id="@item.Id"
+                                        data-tab="wishlist"
+                                        title="Xóa khỏi yêu thích">
+                                    🗑
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="drawer-empty-state">
+                    <div class="drawer-empty-icon">♡</div>
+                    <h3>Danh sách yêu thích trống</h3>
+                    <p>Bạn chưa thêm sản phẩm nào vào yêu thích.</p>
+                    <a asp-controller="Product" asp-action="Index">Xem sản phẩm</a>
+                </div>
+            }
+        }
+
+        @if (activeTab == "compare")
+        {
+            if (Model.CompareProducts.Any())
+            {
+                foreach (var item in Model.CompareProducts)
+                {
+                    <div class="drawer-product-card">
+                        <div class="drawer-product-image">
+                            <img src="@item.ImageUrl"
+                                 alt="@item.Name"
+                                 onerror="this.src='/images/products/no-image.jpg'" />
+                        </div>
+
+                        <div class="drawer-product-content">
+                            <div class="drawer-product-top">
+                                <div>
+                                    <h4>@item.Name</h4>
+                                    <p>@item.Category?.Name</p>
+                                </div>
+
+                                <strong>@item.Price.ToString("N0") đ</strong>
+                            </div>
+
+                            <div class="drawer-product-actions">
+                                <button type="button"
+                                        class="drawer-main-small-btn js-drawer-add-cart"
+                                        data-product-id="@item.Id">
+                                    🛒 Thêm giỏ
+                                </button>
+
+                                <button type="button"
+                                        class="drawer-icon-btn danger js-drawer-remove js-remove-compare"
+                                        data-url="/ShopDrawer/RemoveCompare"
+                                        data-id="@item.Id"
+                                        data-product-id="@item.Id"
+                                        data-tab="compare"
+                                        title="Xóa khỏi so sánh">
+                                    🗑
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="drawer-empty-state">
+                    <div class="drawer-empty-icon">⇄</div>
+                    <h3>Danh sách so sánh trống</h3>
+                    <p>Bạn chưa thêm sản phẩm nào để so sánh.</p>
+                    <a asp-controller="Product" asp-action="Index">Xem sản phẩm</a>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="shop-drawer-footer @(activeTab == "cart" ? "cart-footer" : activeTab == "wishlist" ? "wishlist-footer" : "compare-footer")">
+        @if (activeTab == "cart")
+        {
+            <div class="drawer-total-row">
+                <span>Tổng tiền:</span>
+                <strong>@cartTotal.ToString("N0") đ</strong>
+            </div>
+
+            <div class="drawer-footer-actions drawer-cart-actions">
+                <a asp-controller="Cart"
+                   asp-action="Index"
+                   class="drawer-action-btn">
+                    Xem giỏ hàng
+                </a>
+
+                <a asp-controller="Checkout"
+                   asp-action="Index"
+                   class="drawer-checkout-btn">
+                    Thanh toán
+                </a>
+            </div>
+        }
+        else if (activeTab == "wishlist")
+        {
+            <div class="drawer-footer-actions drawer-single-action">
+                <a asp-controller="Wishlist"
+                   asp-action="Index"
+                   class="drawer-action-btn full">
+                    Xem danh sách yêu thích
+                </a>
+            </div>
+        }
+        else if (activeTab == "compare")
+        {
+            <div class="drawer-footer-actions drawer-compare-actions">
+                <a asp-controller="CompareProducts"
+                   asp-action="Index"
+                   class="drawer-action-btn">
+                    So sánh
+                </a>
+
+                <button type="button"
+                        class="drawer-action-btn js-clear-compare">
+                    Làm sạch
+                </button>
+            </div>
+        }
+    </div>
+</aside>

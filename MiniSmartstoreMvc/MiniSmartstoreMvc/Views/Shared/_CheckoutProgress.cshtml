@@ -1,0 +1,38 @@
+﻿@model int
+
+@{
+    var currentStep = Model;
+
+    var steps = new[]
+    {
+        new { Number = 1, Text = "Giỏ hàng", Icon = "🛍️" },
+        new { Number = 2, Text = "Địa chỉ", Icon = "⌂" },
+        new { Number = 3, Text = "Giao hàng", Icon = "▣" },
+        new { Number = 4, Text = "Thanh toán", Icon = "▤" },
+        new { Number = 5, Text = "Xác nhận", Icon = "✓" },
+        new { Number = 6, Text = "Hoàn tất", Icon = "✔" }
+    };
+}
+
+<div class="checkout-progress-wrap">
+    <div class="checkout-progress">
+        @foreach (var step in steps)
+        {
+            var css = step.Number < currentStep
+                ? "checkout-step completed"
+                : step.Number == currentStep
+                    ? "checkout-step active"
+                    : "checkout-step";
+
+            <div class="@css">
+                <div class="checkout-step-circle">
+                    <span>@step.Icon</span>
+                </div>
+
+                <div class="checkout-step-text">
+                    @step.Text
+                </div>
+            </div>
+        }
+    </div>
+</div>

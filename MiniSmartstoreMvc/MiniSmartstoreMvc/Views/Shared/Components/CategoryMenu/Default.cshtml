@@ -1,0 +1,69 @@
+﻿@model List<MiniSmartstoreMvc.ViewModels.CategoryMenuItemViewModel>
+
+<nav class="shop-category-nav">
+    <div class="shop-category-nav-inner">
+        <a asp-area=""
+           asp-controller="Home"
+           asp-action="Index"
+           class="shop-nav-link">
+            Trang chủ
+        </a>
+
+        <a asp-area=""
+           asp-controller="Product"
+           asp-action="Index"
+           class="shop-nav-link">
+            Tất cả sản phẩm
+        </a>
+
+        @foreach (var category in Model)
+        {
+            if (category.Children.Any())
+            {
+                <div class="shop-nav-item has-children">
+                    <a asp-area=""
+                       asp-controller="Product"
+                       asp-action="Index"
+                       asp-route-categoryId="@category.Id"
+                       class="shop-nav-link">
+                        <span>@category.Name</span>
+                        <span class="shop-chevron"></span>
+                    </a>
+
+                    <div class="shop-submenu">
+                        @foreach (var child in category.Children)
+                        {
+                            <a asp-area=""
+                               asp-controller="Product"
+                               asp-action="Index"
+                               asp-route-categoryId="@child.Id"
+                               class="shop-submenu-link">
+                                <span>@child.Name</span>
+                                <small>@child.ProductCount sản phẩm</small>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <a asp-area=""
+                   asp-controller="Product"
+                   asp-action="Index"
+                   asp-route-categoryId="@category.Id"
+                   class="shop-nav-link">
+                    @category.Name
+                </a>
+            }
+        }
+
+        <a asp-area=""
+           asp-controller="Product"
+           asp-action="Index"
+           asp-route-sortOrder="sale"
+           class="shop-nav-link shop-sale-menu-item">
+            <span class="shop-sale-menu-text">Sale</span>
+            <span class="shop-sale-menu-badge">%</span>
+        </a>
+    </div>
+</nav>

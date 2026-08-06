@@ -1,0 +1,184 @@
+﻿@using MiniSmartstoreMvc.Models
+@model MiniSmartstoreMvc.Models.Order
+
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+
+    var orderDetails = Model.OrderDetails ?? new List<OrderDetail>();
+
+    var calculatedSubTotal = Model.SubTotalAmount > 0
+        ? Model.SubTotalAmount
+        : orderDetails.Sum(x => x.TotalPrice);
+
+    var shippingFee = Model.ShippingFee;
+
+    var discountAmount = Model.DiscountAmount;
+
+    var calculatedTotal = Model.TotalAmount > 0
+        ? Model.TotalAmount
+        : Math.Max(0, calculatedSubTotal + shippingFee - discountAmount);
+}
+
+<div class="container mt-4">
+    <div class="page-heading mb-4">
+        <h1>Chi tiết đơn hàng</h1>
+        <p>Mã đơn hàng: <strong>@Model.OrderCode</strong></p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="order-detail-info">
+                <h4>Thông tin nhận hàng</h4>
+
+                <div class="order-info-row">
+                    <span>Người nhận</span>
+                    <strong>@Model.CustomerName</strong>
+                </div>
+
+                <div class="order-info-row">
+                    <span>Số điện thoại</span>
+                    <strong>@Model.PhoneNumber</strong>
+                </div>
+
+                <div class="order-info-row">
+                    <span>Địa chỉ giao hàng</span>
+                    <strong>@Model.ShippingAddress</strong>
+                </div>
+
+                <div class="order-info-row">
+                    <span>Phương thức giao hàng</span>
+                    <strong>
+                        @(Model.ShippingMethodName ?? Model.ShippingMethod?.Name ?? "Chưa có")
+                    </strong>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.OrderNote))
+                {
+                    <div class="order-info-row">
+                        <span>Ghi chú</span>
+                        <strong>@Model.OrderNote</strong>
+                    </div>
+                }
+            </div>
+
+            <div class="order-detail-info">
+                <h4>Sản phẩm trong đơn</h4>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered order-products-table">
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th style="width: 120px;">Số lượng</th>
+                                <th style="width: 160px;">Đơn giá</th>
+                                <th style="width: 160px;">Thành tiền</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var item in orderDetails)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@item.Product?.Name</strong>
+                                    </td>
+
+                                    <td>@item.Quantity</td>
+
+                                    <td>@item.UnitPrice.ToString("N0") đ</td>
+
+                                    <td class="text-danger fw-bold">
+                                        @item.TotalPrice.ToString("N0") đ
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="order-summary">
+                <h4>Tóm tắt đơn hàng</h4>
+
+                <div class="summary-row">
+                    <span>Ngày đặt</span>
+                    <strong>@Model.CreatedAt.ToString("dd/MM/yyyy")</strong>
+                </div>
+
+                <div class="summary-row">
+                    <span>Trạng thái đơn</span>
+                    <strong>@OrderStatusText(Model.OrderStatus)</strong>
+                </div>
+
+                <div class="summary-row">
+                    <span>Thanh toán</span>
+                    <strong>@PaymentStatusText(Model.PaymentStatus)</strong>
+                </div>
+
+                <hr />
+
+                <div class="summary-row">
+                    <span>Tạm tính</span>
+                    <strong>@calculatedSubTotal.ToString("N0") đ</strong>
+                </div>
+
+                <div class="summary-row">
+                    <span>Phí vận chuyển</span>
+                    <strong>@shippingFee.ToString("N0") đ</strong>
+                </div>
+
+                <div class="summary-row">
+                    <span>Giảm giá</span>
+                    <strong class="text-success">-@discountAmount.ToString("N0") đ</strong>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.CouponCode))
+                {
+                    <div class="summary-row">
+                        <span>Mã giảm giá</span>
+                        <strong>@Model.CouponCode</strong>
+                    </div>
+                }
+
+                <hr />
+
+                <div class="summary-total">
+                    <span>Tổng tiền</span>
+                    <strong>@calculatedTotal.ToString("N0") đ</strong>
+                </div>
+
+                <a asp-controller="Order" asp-action="Index" class="btn btn-outline-primary w-100 mt-4">
+                    Quay lại đơn hàng
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string OrderStatusText(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "Chờ xử lý",
+            OrderStatus.Processing => "Đang xử lý",
+            OrderStatus.Completed => "Hoàn thành",
+            OrderStatus.Cancelled => "Đã hủy",
+            _ => status.ToString()
+        };
+    }
+
+    private string PaymentStatusText(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Pending => "Chờ thanh toán",
+            PaymentStatus.Paid => "Đã thanh toán",
+            PaymentStatus.Failed => "Thất bại",
+            PaymentStatus.Cancelled => "Đã hủy",
+            _ => status.ToString()
+        };
+    }
+}

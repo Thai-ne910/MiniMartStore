@@ -1,0 +1,884 @@
+﻿using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using MiniSmartstoreMvc.Data;
+using MiniSmartstoreMvc.Models;
+using MiniSmartstoreMvc.ViewModels;
+
+namespace MiniSmartstoreMvc.Areas.Admin.Controllers
+{
+    [Area("Admin")]
+    [Authorize(Roles = "Admin")]
+    [Route("admin/category")]
+    public class CategoryController : Controller
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
+
+        public CategoryController(
+            ApplicationDbContext context,
+            IWebHostEnvironment environment)
+        {
+            _context = context;
+            _environment = environment;
+        }
+
+        [HttpGet("")]
+        [HttpGet("list")]
+        public async Task<IActionResult> List(string? search, int page = 1, int pageSize = 25)
+        {
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (pageSize != 10 && pageSize != 25 && pageSize != 50)
+            {
+                pageSize = 25;
+            }
+
+            var query = _context.Categories
+                .Include(c => c.Products)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(c =>
+                    c.Name.Contains(search) ||
+                    (c.Alias != null && c.Alias.Contains(search)));
+            }
+
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var categories = await query
+                .OrderBy(c => c.DisplayOrder)
+                .ThenBy(c => c.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var model = categories.Select(c => new AdminCategoryListItemViewModel
+            {
+                Id = c.Id,
+                Name = c.Name,
+                FullName = c.Name,
+                Alias = c.Alias,
+                ProductCount = c.Products.Count,
+                IsActive = c.IsActive,
+                DisplayOrder = c.DisplayOrder,
+                IncludeInMenu = c.IncludeInMenu,
+                ShowOnHomePage = c.ShowOnHomePage,
+                Level = 0
+            }).ToList();
+
+            ViewBag.Search = search;
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages == 0 ? 1 : totalPages;
+
+            return View(model);
+        }
+
+        [HttpGet("tree")]
+        public async Task<IActionResult> Tree()
+        {
+            var categories = await _context.Categories
+                .Include(c => c.Products)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var items = BuildCategoryList(categories);
+
+            return View(items);
+        }
+
+        [HttpGet("create")]
+        public async Task<IActionResult> Create(int? parentId)
+        {
+            var model = new AdminCategoryEditViewModel
+            {
+                ParentCategoryId = parentId,
+                IsActive = true,
+                ShowOnHomePage = true,
+                IncludeInMenu = true,
+                ParentCategories = await GetParentCategorySelectListAsync()
+            };
+
+            return View(model);
+        }
+
+        [HttpPost("create")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(AdminCategoryEditViewModel model, string saveMode = "save")
+        {
+            ModelState.Remove(nameof(model.ParentCategories));
+            ModelState.Remove(nameof(model.PictureFile));
+
+            if (!ModelState.IsValid)
+            {
+                model.ParentCategories = await GetParentCategorySelectListAsync();
+                return View(model);
+            }
+
+            var category = new Category
+            {
+                ParentCategoryId = model.ParentCategoryId,
+                Name = model.Name.Trim(),
+                Alias = string.IsNullOrWhiteSpace(model.Alias)
+                    ? CreateAlias(model.Name)
+                    : CreateAlias(model.Alias),
+                Description = model.Description,
+                ImageUrl = await SaveImageAsync(model.PictureFile),
+                IsActive = model.IsActive,
+                ShowOnHomePage = model.ShowOnHomePage,
+                IncludeInMenu = model.IncludeInMenu,
+                DisplayOrder = model.DisplayOrder,
+                BadgeText = model.BadgeText,
+                MetaTitle = model.MetaTitle,
+                MetaDescription = model.MetaDescription,
+                MetaKeywords = model.MetaKeywords
+            };
+
+            _context.Categories.Add(category);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Đã thêm danh mục mới.";
+
+            if (saveMode == "continue")
+            {
+                return RedirectToAction(nameof(Edit), new { id = category.Id });
+            }
+
+            return RedirectToAction(nameof(List));
+        }
+
+        [HttpGet("edit/{id:int}")]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var category = await _context.Categories
+                .Include(c => c.Products)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            var model = new AdminCategoryEditViewModel
+            {
+                Id = category.Id,
+                ParentCategoryId = category.ParentCategoryId,
+                Name = category.Name,
+                Alias = category.Alias,
+                Description = category.Description,
+                ImageUrl = category.ImageUrl,
+                IsActive = category.IsActive,
+                ShowOnHomePage = category.ShowOnHomePage,
+                IncludeInMenu = category.IncludeInMenu,
+                DisplayOrder = category.DisplayOrder,
+                BadgeText = category.BadgeText,
+                MetaTitle = category.MetaTitle,
+                MetaDescription = category.MetaDescription,
+                MetaKeywords = category.MetaKeywords,
+                ProductCount = category.Products.Count,
+                ParentCategories = await GetParentCategorySelectListAsync(category.Id)
+            };
+
+            return View(model);
+        }
+
+        [HttpPost("edit/{id:int}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, AdminCategoryEditViewModel model, string saveMode = "save")
+        {
+            if (id != model.Id)
+            {
+                return NotFound();
+            }
+
+            ModelState.Remove(nameof(model.ParentCategories));
+            ModelState.Remove(nameof(model.PictureFile));
+
+            if (model.ParentCategoryId == model.Id)
+            {
+                ModelState.AddModelError(nameof(model.ParentCategoryId), "Danh mục cha không được là chính nó.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                model.ParentCategories = await GetParentCategorySelectListAsync(model.Id);
+                return View(model);
+            }
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            category.ParentCategoryId = model.ParentCategoryId;
+            category.Name = model.Name.Trim();
+            category.Alias = string.IsNullOrWhiteSpace(model.Alias)
+                ? CreateAlias(model.Name)
+                : CreateAlias(model.Alias);
+            category.Description = model.Description;
+            category.IsActive = model.IsActive;
+            category.ShowOnHomePage = model.ShowOnHomePage;
+            category.IncludeInMenu = model.IncludeInMenu;
+            category.DisplayOrder = model.DisplayOrder;
+            category.BadgeText = model.BadgeText;
+            category.MetaTitle = model.MetaTitle;
+            category.MetaDescription = model.MetaDescription;
+            category.MetaKeywords = model.MetaKeywords;
+
+            var newImageUrl = await SaveImageAsync(model.PictureFile);
+
+            if (!string.IsNullOrWhiteSpace(newImageUrl))
+            {
+                category.ImageUrl = newImageUrl;
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Đã cập nhật danh mục.";
+
+            if (saveMode == "continue")
+            {
+                return RedirectToAction(nameof(Edit), new { id = category.Id });
+            }
+
+            return RedirectToAction(nameof(List));
+        }
+
+        [HttpPost("delete/{id:int}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var hasChildren = await _context.Categories.AnyAsync(c => c.ParentCategoryId == id);
+            var hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == id);
+
+            if (hasChildren)
+            {
+                TempData["Error"] = "Không thể xóa vì danh mục này đang có danh mục con.";
+                return RedirectToAction(nameof(List));
+            }
+
+            if (hasProducts)
+            {
+                TempData["Error"] = "Không thể xóa vì danh mục này đang có sản phẩm.";
+                return RedirectToAction(nameof(List));
+            }
+
+            var category = await _context.Categories.FindAsync(id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            _context.Categories.Remove(category);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Đã xóa danh mục.";
+
+            return RedirectToAction(nameof(List));
+        }
+
+        [HttpPost("toggle-published/{id:int}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TogglePublished(int id)
+        {
+            var category = await _context.Categories.FindAsync(id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            category.IsActive = !category.IsActive;
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(List));
+        }
+
+        private async Task<List<SelectListItem>> GetParentCategorySelectListAsync(int? excludeId = null)
+        {
+            var categories = await _context.Categories
+                .AsNoTracking()
+                .OrderBy(c => c.DisplayOrder)
+                .ThenBy(c => c.Name)
+                .ToListAsync();
+
+            var items = BuildCategoryList(categories)
+                .Where(c => excludeId == null || c.Id != excludeId.Value)
+                .Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = new string('—', c.Level * 2) + " " + c.Name
+                })
+                .ToList();
+
+            items.Insert(0, new SelectListItem
+            {
+                Value = "",
+                Text = "[Không có danh mục cha]"
+            });
+
+            return items;
+        }
+
+        private List<AdminCategoryListItemViewModel> BuildCategoryList(List<Category> categories)
+        {
+            var lookup = categories.ToLookup(c => c.ParentCategoryId);
+            var result = new List<AdminCategoryListItemViewModel>();
+
+            void AddChildren(int? parentId, int level, string parentPath)
+            {
+                var children = lookup[parentId]
+                    .OrderBy(c => c.DisplayOrder)
+                    .ThenBy(c => c.Name)
+                    .ToList();
+
+                foreach (var category in children)
+                {
+                    var fullName = string.IsNullOrWhiteSpace(parentPath)
+                        ? category.Name
+                        : $"{parentPath} > {category.Name}";
+
+                    result.Add(new AdminCategoryListItemViewModel
+                    {
+                        Id = category.Id,
+                        ParentCategoryId = category.ParentCategoryId,
+                        Level = level,
+                        HasChildren = lookup[category.Id].Any(),
+                        Name = category.Name,
+                        FullName = fullName,
+                        Alias = category.Alias,
+                        ImageUrl = category.ImageUrl,
+                        IsActive = category.IsActive,
+                        ShowOnHomePage = category.ShowOnHomePage,
+                        IncludeInMenu = category.IncludeInMenu,
+                        DisplayOrder = category.DisplayOrder,
+                        ProductCount = category.Products?.Count ?? 0
+                    });
+
+                    AddChildren(category.Id, level + 1, fullName);
+                }
+            }
+
+            AddChildren(null, 0, "");
+
+            return result;
+        }
+
+        private async Task<string?> SaveImageAsync(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return null;
+            }
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            var extension = Path.GetExtension(file.FileName).ToLower();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                return null;
+            }
+
+            var folder = Path.Combine(_environment.WebRootPath, "images", "categories");
+
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            var fileName = $"{Guid.NewGuid():N}{extension}";
+            var path = Path.Combine(folder, fileName);
+
+            await using var stream = new FileStream(path, FileMode.Create);
+            await file.CopyToAsync(stream);
+
+            return $"/images/categories/{fileName}";
+        }
+
+        private static string CreateAlias(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            text = text.Trim().ToLowerInvariant();
+
+            var normalized = text.Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder();
+
+            foreach (var c in normalized)
+            {
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    builder.Append(c);
+                }
+            }
+
+            var result = builder.ToString().Normalize(NormalizationForm.FormC);
+            result = result.Replace("đ", "d");
+            result = Regex.Replace(result, @"[^a-z0-9\s-]", "");
+            result = Regex.Replace(result, @"\s+", "-");
+            result = Regex.Replace(result, @"-+", "-");
+
+            return result.Trim('-');
+        }
+    }
+}
+
+@model List<MiniSmartstoreMvc.ViewModels.AdminCategoryListItemViewModel>
+
+@{
+    ViewData["Title"] = "Quản lý danh mục";
+
+    var search = ViewBag.Search as string;
+
+    var currentPage = ViewBag.Page is int p ? p : 1;
+    var currentPageSize = ViewBag.PageSize is int ps ? ps : 25;
+    var totalItems = ViewBag.TotalItems is int ti ? ti : Model.Count;
+    var totalPages = ViewBag.TotalPages is int tp && tp > 0 ? tp : 1;
+
+    var previousPage = currentPage > 1 ? currentPage - 1 : 1;
+    var nextPage = currentPage < totalPages ? currentPage + 1 : totalPages;
+}
+
+<div class="admin-category-page">
+    <div class="admin-category-card">
+
+        <div class="admin-category-header">
+            <div class="admin-category-title-group">
+                <div>
+                    <h1>Quản lý danh mục</h1>
+                    <p>Thêm, chỉnh sửa, ẩn/hiện và sắp xếp danh mục hiển thị ngoài cửa hàng.</p>
+                </div>
+
+                <div class="admin-category-view-switch">
+                    <a asp-area="Admin"
+                       asp-controller="Category"
+                       asp-action="List"
+                       class="admin-view-btn active"
+                       title="Xem dạng danh sách">
+                        <span class="admin-css-icon admin-icon-list"></span>
+                    </a>
+
+                    <a asp-area="Admin"
+                       asp-controller="Category"
+                       asp-action="Tree"
+                       class="admin-view-btn"
+                       title="Xem dạng cây danh mục">
+                        <span class="admin-css-icon admin-icon-tree"></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-alert admin-alert-success">
+                @TempData["Success"]
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-alert admin-alert-danger">
+                @TempData["Error"]
+            </div>
+        }
+
+        <div class="admin-category-toolbar smartstore-style">
+            <button type="button"
+                    class="admin-filter-btn"
+                    id="categoryFilterToggle"
+                    title="Bộ lọc">
+                <span class="admin-css-icon admin-icon-filter"></span>
+            </button>
+
+            <a asp-area="Admin"
+               asp-controller="Category"
+               asp-action="Create"
+               class="admin-add-inline-btn">
+                <span>+</span>
+                <span>Thêm mới...</span>
+            </a>
+        </div>
+
+        <div class="admin-filter-panel" id="categoryFilterPanel">
+            <form asp-area="Admin"
+                  asp-controller="Category"
+                  asp-action="List"
+                  method="get">
+
+                <div class="admin-filter-panel-title">
+                    Tìm kiếm danh mục
+                </div>
+
+                <label>Tên danh mục hoặc alias</label>
+
+                <input type="text"
+                       name="search"
+                       value="@search"
+                       placeholder="Nhập từ khóa..." />
+
+                <input type="hidden" name="pageSize" value="@currentPageSize" />
+
+                <div class="admin-filter-actions">
+                    <button type="submit">
+                        Tìm kiếm
+                    </button>
+
+                    <a asp-area="Admin"
+                       asp-controller="Category"
+                       asp-action="List">
+                        Xóa lọc
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="admin-category-table-wrap">
+            <table class="admin-category-table">
+                <thead>
+                    <tr>
+                        <th>Tên danh mục</th>
+                        <th>Đường dẫn đầy đủ</th>
+                        <th>Alias</th>
+                        <th>Sản phẩm</th>
+                        <th>Trạng thái</th>
+                        <th>Thứ tự</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="admin-cat-name-cell" style="--level:@item.Level">
+                                        <a asp-area="Admin"
+                                           asp-controller="Category"
+                                           asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           class="admin-cat-name">
+                                            @item.Name
+                                        </a>
+
+                                        @if (!item.IncludeInMenu)
+                                        {
+                                            <span class="admin-small-tag muted">
+                                                Ẩn menu
+                                            </span>
+                                        }
+
+                                        @if (item.ShowOnHomePage)
+                                        {
+                                            <span class="admin-small-tag">
+                                                Trang chủ
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="admin-cat-path">
+                                        @item.FullName
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="admin-cat-alias">
+                                        @(string.IsNullOrWhiteSpace(item.Alias) ? "Chưa có" : item.Alias)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="admin-count-badge">
+                                        @item.ProductCount
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <form asp-area="Admin"
+                                          asp-controller="Category"
+                                          asp-action="TogglePublished"
+                                          asp-route-id="@item.Id"
+                                          method="post">
+                                        @Html.AntiForgeryToken()
+
+                                        <button type="submit"
+                                                class="admin-status-pill @(item.IsActive ? "is-on" : "is-off")">
+                                            @(item.IsActive ? "Đang hiển thị" : "Đang ẩn")
+                                        </button>
+                                    </form>
+                                </td>
+
+                                <td>
+                                    <span class="admin-order-number">
+                                        @item.DisplayOrder
+                                    </span>
+                                </td>
+
+                                <td class="text-end">
+                                    <div class="admin-row-actions">
+                                        <a asp-area="Admin"
+                                           asp-controller="Category"
+                                           asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           class="admin-icon-btn">
+                                            Sửa
+                                        </a>
+
+                                        <form asp-area="Admin"
+                                              asp-controller="Category"
+                                              asp-action="Delete"
+                                              asp-route-id="@item.Id"
+                                              method="post"
+                                              onsubmit="return confirm('Bạn có chắc muốn xóa danh mục này không? Nếu danh mục đang có sản phẩm hoặc danh mục con thì hệ thống sẽ không cho xóa.');">
+                                            @Html.AntiForgeryToken()
+
+                                            <button type="submit" class="admin-icon-btn danger">
+                                                Xóa
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="admin-empty-row">
+                                Không tìm thấy danh mục nào.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="admin-category-grid-footer">
+            <div class="admin-grid-left">
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@currentPage"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn"
+                   title="Làm mới">
+                    <span class="admin-css-icon admin-icon-refresh"></span>
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="1"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage <= 1 ? "disabled" : "")">
+                    «
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@previousPage"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage <= 1 ? "disabled" : "")">
+                    ‹
+                </a>
+
+                <span class="admin-grid-page-number">
+                    @currentPage
+                </span>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@nextPage"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage >= totalPages ? "disabled" : "")">
+                    ›
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@totalPages"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage >= totalPages ? "disabled" : "")">
+                    »
+                </a>
+            </div>
+
+            <div class="admin-grid-right">
+                <span>
+                    Hiển thị @Model.Count / @totalItems danh mục
+                </span>
+
+                <form asp-area="Admin"
+                      asp-controller="Category"
+                      asp-action="List"
+                      method="get"
+                      class="admin-page-size-form">
+
+                    <input type="hidden" name="search" value="@search" />
+                    <input type="hidden" name="page" value="1" />
+
+                    <select name="pageSize" onchange="this.form.submit()">
+                        <option value="10" selected="@(currentPageSize == 10)">10 dòng / trang</option>
+                        <option value="25" selected="@(currentPageSize == 25)">25 dòng / trang</option>
+                        <option value="50" selected="@(currentPageSize == 50)">50 dòng / trang</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const toggle = document.getElementById("categoryFilterToggle");
+            const panel = document.getElementById("categoryFilterPanel");
+
+            if (!toggle || !panel) return;
+
+            toggle.addEventListener("click", function () {
+                panel.classList.toggle("is-open");
+            });
+
+            document.addEventListener("click", function (event) {
+                if (!panel.contains(event.target) && !toggle.contains(event.target)) {
+                    panel.classList.remove("is-open");
+                }
+            });
+        });
+    </script>
+}
+
+@model IEnumerable<MiniSmartstoreMvc.Models.Category>
+
+@{
+    ViewData["Title"] = "Quản lý danh mục";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Quản lý danh mục</h2>
+
+    <a asp-area="Admin" asp-controller="Category" asp-action="Create" class="btn btn-primary">
+        Thêm danh mục
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["Success"]
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["Error"]
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Tên danh mục</th>
+                    <th>Mô tả</th>
+                    <th style="width: 140px;">Số sản phẩm</th>
+                    <th style="width: 120px;">Trạng thái</th>
+                    <th style="width: 180px;">Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Id</td>
+
+                            <td>
+                                <strong>@item.Name</strong>
+                            </td>
+
+                            <td>@item.Description</td>
+
+                            <td>
+                                @(item.Products?.Count ?? 0)
+                            </td>
+
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge bg-success">Đang hiển thị</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Đã ẩn</span>
+                                }
+                            </td>
+
+                            <td>
+                                <a asp-area="Admin" asp-controller="Category" asp-action="Edit" asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-warning">
+                                    Sửa
+                                </a>
+
+                                <form asp-area="Admin" asp-controller="Category" asp-action="Delete" asp-route-id="@item.Id"
+                                      method="post" class="d-inline"
+                                      onsubmit="return confirm('Bạn có chắc muốn xóa danh mục này?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Xóa
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            Chưa có danh mục nào.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

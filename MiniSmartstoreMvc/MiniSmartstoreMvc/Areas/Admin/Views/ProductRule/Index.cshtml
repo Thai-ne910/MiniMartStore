@@ -1,0 +1,209 @@
+﻿@using MiniSmartstoreMvc.Models
+@model IEnumerable<ProductRule>
+
+@{
+    ViewData["Title"] = "Quy tắc sản phẩm";
+}
+
+<div class="admin-product-page">
+    <div class="admin-product-title-row">
+        <div>
+            <h2>Quy tắc sản phẩm</h2>
+            <p class="text-muted mb-0">
+                Tạo các quy tắc tự động cho sản phẩm như giảm giá, nổi bật, ẩn hoặc hiện sản phẩm theo thời gian.
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <form asp-area="Admin" asp-controller="ProductRule" asp-action="ApplyNow" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary">
+                    Áp dụng lại quy tắc
+                </button>
+            </form>
+
+            <a asp-area="Admin"
+               asp-controller="ProductRule"
+               asp-action="Create"
+               class="btn btn-primary">
+                + Thêm quy tắc
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <div class="smart-manage-card">
+        <div class="smart-table-scroll">
+            <table class="table smart-product-table">
+                <thead>
+                    <tr>
+                        <th>Tên quy tắc</th>
+                        <th>Loại quy tắc</th>
+                        <th>Áp dụng cho</th>
+                        <th>Giảm giá</th>
+                        <th>Thời gian</th>
+                        <th>Ưu tiên</th>
+                        <th>Trạng thái</th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@item.RuleName</strong>
+
+                                    @if (!string.IsNullOrWhiteSpace(item.Description))
+                                    {
+                                        <div class="text-muted small">@item.Description</div>
+                                    }
+                                </td>
+
+                                <td>@ActionText(item.ActionType)</td>
+
+                                <td>@TargetText(item)</td>
+
+                                <td>
+                                    @if (item.ActionType == ProductRuleActionType.Discount)
+                                    {
+                                        if (item.DiscountType == DiscountType.Percentage)
+                                        {
+                                            <span>@item.DiscountValue.ToString("N0")%</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@item.DiscountValue.ToString("N0") đ</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Không áp dụng</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div>@item.StartDate.ToString("dd/MM/yyyy HH:mm")</div>
+                                    <div class="text-muted small">đến @item.EndDate.ToString("dd/MM/yyyy HH:mm")</div>
+                                </td>
+
+                                <td>@item.Priority</td>
+
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge bg-success">Đang bật</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Đang tắt</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="dropdown">
+                                        <button type="button"
+                                                class="product-row-more"
+                                                data-bs-toggle="dropdown">
+                                            ⋯
+                                        </button>
+
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   asp-area="Admin"
+                                                   asp-controller="ProductRule"
+                                                   asp-action="Edit"
+                                                   asp-route-id="@item.Id">
+                                                    Sửa quy tắc
+                                                </a>
+                                            </li>
+
+                                            <li>
+                                                <form asp-area="Admin"
+                                                      asp-controller="ProductRule"
+                                                      asp-action="ToggleActive"
+                                                      asp-route-id="@item.Id"
+                                                      method="post">
+                                                    @Html.AntiForgeryToken()
+
+                                                    <button type="submit" class="dropdown-item">
+                                                        @(item.IsActive ? "Tắt quy tắc" : "Bật quy tắc")
+                                                    </button>
+                                                </form>
+                                            </li>
+
+                                            <li>
+                                                <form asp-area="Admin"
+                                                      asp-controller="ProductRule"
+                                                      asp-action="Delete"
+                                                      asp-route-id="@item.Id"
+                                                      method="post"
+                                                      onsubmit="return confirm('Bạn có chắc muốn xóa quy tắc này?')">
+                                                    @Html.AntiForgeryToken()
+
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        Xóa quy tắc
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center p-4">
+                                Chưa có quy tắc sản phẩm nào.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string ActionText(ProductRuleActionType actionType)
+    {
+        return actionType switch
+        {
+            ProductRuleActionType.Discount => "Giảm giá",
+            ProductRuleActionType.MarkAsFeatured => "Đánh dấu nổi bật",
+            ProductRuleActionType.HideProduct => "Ẩn sản phẩm",
+            ProductRuleActionType.ShowProduct => "Hiện sản phẩm",
+            _ => actionType.ToString()
+        };
+    }
+
+    private string TargetText(ProductRule item)
+    {
+        if (item.TargetType == ProductRuleTargetType.AllProducts)
+        {
+            return "Toàn bộ sản phẩm";
+        }
+
+        if (item.TargetType == ProductRuleTargetType.Category)
+        {
+            return "Danh mục: " + (item.Category?.Name ?? "Không xác định");
+        }
+
+        if (item.TargetType == ProductRuleTargetType.Product)
+        {
+            return "Sản phẩm: " + (item.Product?.Name ?? "Không xác định");
+        }
+
+        return "Không xác định";
+    }
+}

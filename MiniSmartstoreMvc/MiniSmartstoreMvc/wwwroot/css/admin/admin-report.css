@@ -1,0 +1,614 @@
+﻿/* =========================================================
+   MINI SMARTSTORE ADMIN - REPORT CSS
+   File: wwwroot/css/admin/admin-report.css
+   Dùng riêng cho khu vực Báo cáo
+   ========================================================= */
+
+/* ==============================
+   REPORT MENU - HEADER DROPDOWN
+   ============================== */
+
+.msa-report-menu {
+    min-width: 420px;
+    padding: 14px;
+    border: 1px solid #dce7f3;
+    border-radius: 16px;
+    box-shadow: 0 18px 46px rgba(15, 39, 72, 0.18);
+}
+
+    .msa-report-menu .msa-menu-item {
+        min-height: 74px;
+        padding: 13px 14px;
+        border-radius: 13px;
+    }
+
+    .msa-report-menu .msa-menu-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 13px;
+        background: #eef6ff;
+        border: 1px solid #d7e8fb;
+        color: #1f63ad;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 44px;
+    }
+
+        .msa-report-menu .msa-menu-icon i {
+            font-size: 21px;
+            line-height: 1;
+        }
+
+    .msa-report-menu .msa-menu-item:hover .msa-menu-icon {
+        background: #e2f0ff;
+        border-color: #b9d9f8;
+        color: #0d5ea8;
+    }
+
+    .msa-report-menu .msa-menu-item strong {
+        font-size: 14px;
+        font-weight: 850;
+        color: #0f2748;
+        letter-spacing: -0.015em;
+    }
+
+    .msa-report-menu .msa-menu-item small {
+        margin-top: 4px;
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 1.35;
+        color: #8a9ab2;
+    }
+
+
+/* ==============================
+   REPORT PAGE BASE
+   ============================== */
+
+.admin-report-page {
+    min-height: calc(100vh - 86px);
+    padding: 34px 42px 48px;
+    background: #eef4f9;
+    font-family: "Be Vietnam Pro", Arial, sans-serif;
+    color: #0f2748;
+}
+
+.admin-report-shell {
+    background: #ffffff;
+    border: 1px solid #dce7f3;
+    border-radius: 20px;
+    box-shadow: 0 14px 36px rgba(15, 39, 72, 0.08);
+    overflow: hidden;
+}
+
+.admin-report-header {
+    padding: 28px 32px 22px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    border-bottom: 1px solid #e6eef7;
+}
+
+.admin-report-title h1 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.25;
+    font-weight: 900;
+    color: #071d3a;
+    letter-spacing: -0.04em;
+}
+
+.admin-report-title p {
+    margin: 8px 0 0;
+    max-width: 760px;
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 650;
+    color: #8292aa;
+}
+
+
+/* ==============================
+   REPORT TABS
+   ============================== */
+
+.admin-report-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+    .admin-report-tabs a {
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: 11px;
+        border: 1px solid #dce7f3;
+        background: #f8fbff;
+        color: #263b59;
+        font-size: 13px;
+        font-weight: 800;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.16s ease;
+    }
+
+        .admin-report-tabs a:hover {
+            background: #eef6ff;
+            color: #1f63ad;
+            border-color: #bdd8f5;
+        }
+
+        .admin-report-tabs a.active {
+            background: #1f63ad;
+            color: #ffffff;
+            border-color: #1f63ad;
+            box-shadow: 0 10px 24px rgba(31, 99, 173, 0.22);
+        }
+
+
+/* ==============================
+   REPORT BODY
+   ============================== */
+
+.admin-report-body {
+    padding: 28px 32px 34px;
+}
+
+.admin-report-stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.admin-report-stat {
+    min-height: 118px;
+    padding: 18px 18px 16px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    border: 1px solid #dce7f3;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.admin-report-stat-label {
+    font-size: 11px;
+    line-height: 1.35;
+    font-weight: 850;
+    color: #8091aa;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+}
+
+.admin-report-stat-value {
+    margin-top: 10px;
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 900;
+    color: #071d3a;
+    letter-spacing: -0.035em;
+    word-break: break-word;
+}
+
+.admin-report-stat-note {
+    margin-top: 7px;
+    font-size: 11px;
+    line-height: 1.45;
+    font-weight: 700;
+    color: #8fa0b8;
+}
+
+
+/* ==============================
+   REPORT CARDS
+   ============================== */
+
+.admin-report-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.admin-report-card {
+    background: #ffffff;
+    border: 1px solid #dce7f3;
+    border-radius: 17px;
+    overflow: hidden;
+}
+
+.admin-report-card-header {
+    min-height: 88px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #edf2f8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+    .admin-report-card-header h2 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.28;
+        font-weight: 900;
+        color: #071d3a;
+        letter-spacing: -0.03em;
+    }
+
+    .admin-report-card-header p {
+        margin: 5px 0 0;
+        font-size: 12px;
+        line-height: 1.45;
+        font-weight: 650;
+        color: #8a9ab2;
+    }
+
+.admin-report-card-body {
+    padding: 18px 20px;
+}
+
+
+/* ==============================
+   FILTER
+   ============================== */
+
+.admin-report-filter {
+    padding: 18px 20px;
+    background: #f8fbff;
+    border-bottom: 1px solid #e6eef7;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-report-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+    .admin-report-field label {
+        font-size: 12px;
+        font-weight: 850;
+        color: #41536d;
+    }
+
+.admin-report-control {
+    height: 42px;
+    min-width: 170px;
+    padding: 0 12px;
+    background: #ffffff;
+    border: 1px solid #d7e3f0;
+    border-radius: 10px;
+    color: #0f2748;
+    font-size: 13px;
+    font-weight: 700;
+    outline: none;
+    transition: 0.15s ease;
+}
+
+    .admin-report-control:focus {
+        border-color: #7eb8f0;
+        box-shadow: 0 0 0 4px rgba(43, 128, 210, 0.12);
+    }
+
+
+/* ==============================
+   BUTTONS / SWITCH
+   ============================== */
+
+.admin-report-primary-btn {
+    height: 42px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 10px;
+    background: #1f63ad;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 850;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.16s ease;
+}
+
+    .admin-report-primary-btn:hover {
+        background: #2479c8;
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(31, 99, 173, 0.2);
+    }
+
+.admin-report-secondary-btn {
+    height: 42px;
+    padding: 0 16px;
+    border: 1px solid #dce7f3;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #31445f;
+    font-size: 13px;
+    font-weight: 850;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.16s ease;
+}
+
+    .admin-report-secondary-btn:hover {
+        background: #f3f8ff;
+        color: #1f63ad;
+        border-color: #bdd8f5;
+    }
+
+.admin-report-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+    .admin-report-switch a {
+        height: 38px;
+        padding: 0 14px;
+        border-radius: 10px;
+        border: 1px solid #dce7f3;
+        background: #ffffff;
+        color: #31445f;
+        font-size: 13px;
+        font-weight: 850;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: 0.16s ease;
+    }
+
+        .admin-report-switch a:hover {
+            background: #f3f8ff;
+            color: #1f63ad;
+        }
+
+        .admin-report-switch a.active {
+            background: #fff6e6;
+            color: #a46400;
+            border-color: #ffd896;
+        }
+
+
+/* ==============================
+   TABLE
+   ============================== */
+
+.admin-report-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.admin-report-table {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+}
+
+    .admin-report-table th {
+        padding: 14px 18px;
+        background: #f8fbff;
+        border-bottom: 1px solid #dce7f3;
+        color: #0f2748;
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 900;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .admin-report-table td {
+        padding: 15px 18px;
+        border-bottom: 1px solid #edf2f8;
+        color: #273a55;
+        font-size: 13px;
+        line-height: 1.45;
+        font-weight: 650;
+        vertical-align: middle;
+    }
+
+    .admin-report-table tr:hover td {
+        background: #fbfdff;
+    }
+
+.admin-report-link {
+    color: #005baa;
+    font-weight: 850;
+    text-decoration: none;
+}
+
+    .admin-report-link:hover {
+        color: #2479c8;
+        text-decoration: underline;
+    }
+
+.admin-report-money {
+    color: #071d3a;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.admin-report-muted {
+    margin-top: 3px;
+    color: #8a9ab2;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.admin-report-badge {
+    min-width: 34px;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #eef4f9;
+    color: #28405f;
+    font-size: 12px;
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-report-pill {
+    min-height: 30px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+    .admin-report-pill.success {
+        background: #d7f8e4;
+        color: #007a3d;
+    }
+
+    .admin-report-pill.warning {
+        background: #fff1d4;
+        color: #9a5800;
+    }
+
+    .admin-report-pill.danger {
+        background: #ffe0e0;
+        color: #b10012;
+    }
+
+    .admin-report-pill.info {
+        background: #e1f0ff;
+        color: #1f63ad;
+    }
+
+    .admin-report-pill.hidden {
+        background: #e9edf3;
+        color: #637187;
+    }
+
+.admin-report-empty {
+    padding: 34px 20px !important;
+    text-align: center;
+    color: #8a9ab2;
+    font-size: 14px;
+    font-weight: 750;
+}
+
+
+/* ==============================
+   CANVAS CHARTS
+   ============================== */
+
+.admin-report-canvas-wrap {
+    width: 100%;
+    height: 260px;
+    padding: 10px 4px 0;
+    position: relative;
+}
+
+    .admin-report-canvas-wrap.line {
+        height: 280px;
+    }
+
+    .admin-report-canvas-wrap canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+
+/* ==============================
+   OLD CHART SAFETY RESET
+   Tránh CSS cũ còn sót làm biểu đồ lỗi
+   ============================== */
+
+.admin-report-chart,
+.admin-report-line-chart {
+    display: none;
+}
+
+
+/* ==============================
+   RESPONSIVE
+   ============================== */
+
+@media (max-width: 1400px) {
+    .admin-report-stats {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 1200px) {
+    .admin-report-page {
+        padding: 28px 24px 42px;
+    }
+
+    .admin-report-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-report-tabs {
+        justify-content: flex-start;
+    }
+
+    .admin-report-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-report-page {
+        padding: 18px 12px 32px;
+    }
+
+    .admin-report-header {
+        padding: 22px 18px;
+    }
+
+    .admin-report-body {
+        padding: 20px 18px;
+    }
+
+    .admin-report-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-report-title h1 {
+        font-size: 23px;
+    }
+
+    .admin-report-tabs a {
+        min-height: 38px;
+        padding: 0 12px;
+        font-size: 12px;
+    }
+
+    .admin-report-filter {
+        align-items: stretch;
+    }
+
+    .admin-report-field,
+    .admin-report-control,
+    .admin-report-primary-btn,
+    .admin-report-secondary-btn {
+        width: 100%;
+    }
+
+    .admin-report-canvas-wrap,
+    .admin-report-canvas-wrap.line {
+        height: 240px;
+    }
+}

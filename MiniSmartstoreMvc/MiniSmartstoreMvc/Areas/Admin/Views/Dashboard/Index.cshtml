@@ -1,0 +1,530 @@
+﻿@model MiniSmartstoreMvc.ViewModels.AdminDashboardViewModel
+@using System.Text.Json
+@using MiniSmartstoreMvc.Models
+
+@{
+    ViewData["Title"] = "Dashboard";
+
+    var incompleteMetrics = new[]
+    {
+        Model.IncompleteToday,
+        Model.IncompleteLast7Days,
+        Model.IncompleteLast28Days,
+        Model.IncompleteThisYear
+    };
+
+    var dashboardData = new
+    {
+        incomplete = incompleteMetrics.Select((x, index) => new
+        {
+            id = $"incomplete-chart-{index}",
+            title = x.Title,
+            count = x.Count,
+            amount = x.Amount
+        }).ToList(),
+
+        orders = Model.OrderPeriods.Select(p => new
+        {
+            key = p.Key,
+            label = p.Label,
+            count = p.Count,
+            totalAmount = p.TotalAmount,
+            completedAmount = p.CompletedAmount,
+            processingAmount = p.ProcessingAmount,
+            pendingAmount = p.PendingAmount,
+            cancelledAmount = p.CancelledAmount,
+            labels = p.Points.Select(x => x.Label).ToList(),
+            amounts = p.Points.Select(x => x.Amount).ToList(),
+            counts = p.Points.Select(x => x.Count).ToList(),
+            tooltips = p.Points.Select(x => x.Tooltip).ToList()
+        }).ToList(),
+
+        registrations = Model.RegistrationPeriods.Select(p => new
+        {
+            key = p.Key,
+            label = p.Label,
+            count = p.Count,
+            labels = p.Points.Select(x => x.Label).ToList(),
+            counts = p.Points.Select(x => x.Count).ToList(),
+            tooltips = p.Points.Select(x => x.Tooltip).ToList()
+        }).ToList()
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin/admin-dashboard.css" asp-append-version="true" />
+}
+
+<div class="admin-dashboard-page">
+    <div class="dashboard-main-grid">
+
+        <section class="dashboard-left-col">
+            <div class="dashboard-card dashboard-incomplete-card">
+                <div class="dashboard-card-header">
+                    <div>
+                        <h2>Đơn hàng chưa hoàn tất</h2>
+                        <p>Theo dõi các đơn đang chờ xử lý hoặc chưa hoàn thành.</p>
+                    </div>
+                </div>
+
+                <div class="dashboard-circle-grid">
+                    @for (var i = 0; i < incompleteMetrics.Length; i++)
+                    {
+                        var metric = incompleteMetrics[i];
+
+                        <div class="dashboard-circle-item">
+                            <h3>@metric.Title</h3>
+
+                            <div class="dashboard-circle-wrap">
+                                <canvas id="incomplete-chart-@i"></canvas>
+
+                                <div class="dashboard-circle-text">
+                                    <strong>@metric.Count</strong>
+                                    <span>@metric.Amount.ToString("N0") đ</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="dashboard-card dashboard-stats-card">
+                <div class="dashboard-stat-grid">
+                    <a asp-area="Admin" asp-controller="Product" asp-action="Index" class="dashboard-stat-box">
+                        <span class="dashboard-css-icon dashboard-icon-product"></span>
+                        <div>
+                            <strong>@Model.ProductCount</strong>
+                            <small>Sản phẩm</small>
+                        </div>
+                    </a>
+
+                    <a asp-area="Admin" asp-controller="Category" asp-action="List" class="dashboard-stat-box">
+                        <span class="dashboard-css-icon dashboard-icon-category"></span>
+                        <div>
+                            <strong>@Model.CategoryCount</strong>
+                            <small>Danh mục</small>
+                        </div>
+                    </a>
+
+                    <a asp-area="Admin" asp-controller="Order" asp-action="List" class="dashboard-stat-box">
+                        <span class="dashboard-css-icon dashboard-icon-order"></span>
+                        <div>
+                            <strong>@Model.OrderCount</strong>
+                            <small>Đơn hàng</small>
+                        </div>
+                    </a>
+
+                    <a asp-area="Admin" asp-controller="Customer" asp-action="Index" class="dashboard-stat-box">
+                        <span class="dashboard-css-icon dashboard-icon-customer"></span>
+                        <div>
+                            <strong>@Model.CustomerCount</strong>
+                            <small>Khách hàng</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="dashboard-card dashboard-report-card" id="orders-report">
+                <div class="dashboard-card-header">
+                    <div>
+                        <h2>Đơn hàng</h2>
+                        <p>
+                            Tổng doanh thu:
+                            <strong id="orders-current-sum">@Model.TotalRevenue.ToString("N0") đ</strong>
+                        </p>
+                    </div>
+
+                    <div class="dashboard-period-buttons" data-chart-target="orders">
+                        @for (var i = 0; i < Model.OrderPeriods.Count; i++)
+                        {
+                            <button type="button"
+                                    class="dashboard-period-btn @(i == 0 ? "active" : "")"
+                                    data-period-index="@i">
+                                @Model.OrderPeriods[i].Label
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="dashboard-legend-row">
+                    <span class="legend-item complete">Hoàn thành @Model.CompletedAmount.ToString("N0") đ</span>
+                    <span class="legend-item processing">Đang xử lý @Model.ProcessingAmount.ToString("N0") đ</span>
+                    <span class="legend-item pending">Chờ xử lý @Model.PendingAmount.ToString("N0") đ</span>
+                    <span class="legend-item cancelled">Đã hủy @Model.CancelledAmount.ToString("N0") đ</span>
+                </div>
+
+                <div class="dashboard-chart-box">
+                    <canvas id="orders-chart"></canvas>
+                </div>
+            </div>
+
+            @{
+                var bestSellersByQuantity = Model.BestSellers
+                    .OrderByDescending(x => x.QuantitySold)
+                    .ThenByDescending(x => x.Amount)
+                    .ToList();
+
+                var bestSellersByAmount = Model.BestSellers
+                    .OrderByDescending(x => x.Amount)
+                    .ThenByDescending(x => x.QuantitySold)
+                    .ToList();
+
+                var topCustomersByOrders = Model.TopCustomers
+                    .OrderByDescending(x => x.OrderCount)
+                    .ThenByDescending(x => x.Amount)
+                    .ToList();
+
+                var topCustomersByAmount = Model.TopCustomers
+                    .OrderByDescending(x => x.Amount)
+                    .ThenByDescending(x => x.OrderCount)
+                    .ToList();
+            }
+
+            <div class="dashboard-bottom-grid">
+                <div class="dashboard-card dashboard-switch-card">
+                    <div class="dashboard-card-header small">
+                        <div>
+                            <h2>Sản phẩm bán chạy</h2>
+                            <p>Dựa trên các đơn đã hoàn thành hoặc đã thanh toán.</p>
+                        </div>
+
+                        <div class="dashboard-mini-tabs" data-dashboard-tab-group="best-sellers">
+                            <button type="button"
+                                    class="dashboard-mini-tab active"
+                                    data-dashboard-tab="best-sellers-quantity">
+                                Theo số lượng
+                            </button>
+
+                            <button type="button"
+                                    class="dashboard-mini-tab"
+                                    data-dashboard-tab="best-sellers-amount">
+                                Theo doanh thu
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-tab-panel active" id="best-sellers-quantity">
+                        <div class="dashboard-table-wrap">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Sản phẩm</th>
+                                        <th class="text-center">Đã bán</th>
+                                        <th class="text-end">Doanh thu</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (bestSellersByQuantity.Any())
+                                    {
+                                        foreach (var item in bestSellersByQuantity)
+                                        {
+                                            <tr>
+                                                <td>@item.ProductName</td>
+                                                <td class="text-center">@item.QuantitySold</td>
+                                                <td class="text-end">@item.Amount.ToString("N0") đ</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="3" class="dashboard-empty">Chưa có dữ liệu bán hàng.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="best-sellers-amount">
+                        <div class="dashboard-table-wrap">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Sản phẩm</th>
+                                        <th class="text-center">Đã bán</th>
+                                        <th class="text-end">Doanh thu</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (bestSellersByAmount.Any())
+                                    {
+                                        foreach (var item in bestSellersByAmount)
+                                        {
+                                            <tr>
+                                                <td>@item.ProductName</td>
+                                                <td class="text-center">@item.QuantitySold</td>
+                                                <td class="text-end">@item.Amount.ToString("N0") đ</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="3" class="dashboard-empty">Chưa có dữ liệu bán hàng.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card dashboard-switch-card">
+                    <div class="dashboard-card-header small">
+                        <div>
+                            <h2>Khách hàng nổi bật</h2>
+                            <p>Khách hàng có hoạt động mua hàng cao nhất.</p>
+                        </div>
+
+                        <div class="dashboard-mini-tabs" data-dashboard-tab-group="top-customers">
+                            <button type="button"
+                                    class="dashboard-mini-tab active"
+                                    data-dashboard-tab="top-customers-orders">
+                                Theo số đơn
+                            </button>
+
+                            <button type="button"
+                                    class="dashboard-mini-tab"
+                                    data-dashboard-tab="top-customers-amount">
+                                Theo tổng tiền
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-tab-panel active" id="top-customers-orders">
+                        <div class="dashboard-table-wrap">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Khách hàng</th>
+                                        <th class="text-center">Đơn</th>
+                                        <th class="text-end">Tổng tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (topCustomersByOrders.Any())
+                                    {
+                                        foreach (var item in topCustomersByOrders)
+                                        {
+                                            <tr>
+                                                <td>@item.CustomerName</td>
+                                                <td class="text-center">@item.OrderCount</td>
+                                                <td class="text-end">@item.Amount.ToString("N0") đ</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="3" class="dashboard-empty">Chưa có khách hàng nổi bật.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="top-customers-amount">
+                        <div class="dashboard-table-wrap">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Khách hàng</th>
+                                        <th class="text-center">Đơn</th>
+                                        <th class="text-end">Tổng tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (topCustomersByAmount.Any())
+                                    {
+                                        foreach (var item in topCustomersByAmount)
+                                        {
+                                            <tr>
+                                                <td>@item.CustomerName</td>
+                                                <td class="text-center">@item.OrderCount</td>
+                                                <td class="text-end">@item.Amount.ToString("N0") đ</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="3" class="dashboard-empty">Chưa có khách hàng nổi bật.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card dashboard-report-card" id="customers-report">
+                <div class="dashboard-card-header">
+                    <div>
+                        <h2>Khách hàng đăng ký</h2>
+                        <p>Số lượng tài khoản mới theo từng khoảng thời gian.</p>
+                    </div>
+
+                    <div class="dashboard-period-buttons" data-chart-target="customers">
+                        @for (var i = 0; i < Model.RegistrationPeriods.Count; i++)
+                        {
+                            <button type="button"
+                                    class="dashboard-period-btn @(i == 0 ? "active" : "")"
+                                    data-period-index="@i">
+                                @Model.RegistrationPeriods[i].Label
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="dashboard-chart-box customer-chart">
+                    <canvas id="customers-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <aside class="dashboard-right-col">
+            <div class="dashboard-card dashboard-news-card">
+                <div class="dashboard-news-header">
+                    <h2>Bảng tin</h2>
+                </div>
+
+                <div class="dashboard-news-select">
+                    <span>Tin tức</span>
+                    <span class="dashboard-chevron"></span>
+                </div>
+
+                <div class="dashboard-news-highlight">
+                    <small>Thông báo hệ thống</small>
+                    <strong>MiniSmartstore Admin</strong>
+                </div>
+
+                <div class="dashboard-news-body">
+                    <article>
+                        <h3>Cập nhật giao diện quản trị</h3>
+                        <p>Dashboard mới giúp Admin theo dõi đơn hàng, doanh thu, sản phẩm bán chạy và khách hàng nổi bật dễ hơn.</p>
+                    </article>
+
+                    <article>
+                        <h3>Quản lý đơn hàng</h3>
+                        <p>Admin có thể cập nhật trạng thái đơn hàng và trạng thái thanh toán trong khu vực quản trị.</p>
+                    </article>
+
+                    <article>
+                        <h3>Quy tắc sản phẩm</h3>
+                        <p>Các quy tắc giảm giá, nổi bật, ẩn/hiện sản phẩm sẽ ảnh hưởng trực tiếp tới giao diện shop.</p>
+                    </article>
+                </div>
+            </div>
+
+            <div class="dashboard-card dashboard-latest-card">
+                <div class="dashboard-card-header small">
+                    <div>
+                        <h2>Đơn hàng gần đây</h2>
+                        <p>8 đơn mới nhất trong hệ thống.</p>
+                    </div>
+                </div>
+
+                <div class="dashboard-latest-list">
+                    @if (Model.LatestOrders.Any())
+                    {
+                        foreach (var order in Model.LatestOrders)
+                        {
+                            <a asp-area="Admin"
+                               asp-controller="Order"
+                               asp-action="Details"
+                               asp-route-id="@order.Id"
+                               class="dashboard-order-mini">
+                                <div>
+                                    <strong>#@order.Id</strong>
+                                    <span>@order.CustomerName</span>
+                                </div>
+
+                                <div>
+                                    <b>@order.TotalAmount.ToString("N0") đ</b>
+                                    <small class="@GetOrderStatusClass(order.OrderStatus)">
+                                        @GetOrderStatusText(order.OrderStatus)
+                                    </small>
+                                </div>
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <div class="dashboard-empty p-3">Chưa có đơn hàng.</div>
+                    }
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/js/admin/admin-dashboard.js" asp-append-version="true"></script>
+
+    <script>
+        window.MiniDashboardData = @Html.Raw(JsonSerializer.Serialize(dashboardData));
+        window.MiniAdminDashboard.init(window.MiniDashboardData);
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".dashboard-mini-tabs").forEach(function (tabGroup) {
+                tabGroup.querySelectorAll(".dashboard-mini-tab").forEach(function (button) {
+                    button.addEventListener("click", function () {
+                        const targetId = button.dataset.dashboardTab;
+                        const card = button.closest(".dashboard-switch-card");
+
+                        if (!card) {
+                            return;
+                        }
+
+                        tabGroup.querySelectorAll(".dashboard-mini-tab").forEach(function (item) {
+                            item.classList.remove("active");
+                        });
+
+                        button.classList.add("active");
+
+                        card.querySelectorAll(".dashboard-tab-panel").forEach(function (panel) {
+                            panel.classList.remove("active");
+                        });
+
+                        const targetPanel = card.querySelector("#" + targetId);
+
+                        if (targetPanel) {
+                            targetPanel.classList.add("active");
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}
+
+@functions {
+    string GetOrderStatusText(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "Chờ xử lý",
+            OrderStatus.Processing => "Đang xử lý",
+            OrderStatus.Completed => "Hoàn thành",
+            OrderStatus.Cancelled => "Đã hủy",
+            _ => "Không xác định"
+        };
+    }
+
+    string GetOrderStatusClass(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "pending",
+            OrderStatus.Processing => "processing",
+            OrderStatus.Completed => "completed",
+            OrderStatus.Cancelled => "cancelled",
+            _ => "pending"
+        };
+    }
+}

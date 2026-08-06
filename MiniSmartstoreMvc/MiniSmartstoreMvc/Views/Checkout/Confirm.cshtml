@@ -1,0 +1,174 @@
+﻿@using MiniSmartstoreMvc.Models
+@model MiniSmartstoreMvc.ViewModels.CheckoutConfirmViewModel
+
+@{
+    ViewData["Title"] = "Xác nhận đơn hàng";
+}
+
+<div class="container checkout-smart-page">
+    <partial name="_CheckoutProgress" model="5" />
+
+    <div class="checkout-two-column">
+        <main>
+            <h1 class="checkout-main-title">Xác nhận đơn hàng</h1>
+
+            <p class="checkout-intro-text">
+                Vui lòng kiểm tra lại thông tin giao hàng, phương thức thanh toán và sản phẩm trước khi hoàn tất đơn hàng.
+            </p>
+
+            <div class="checkout-confirm-grid">
+                <div class="checkout-confirm-box">
+                    <div class="confirm-title-row">
+                        <h4>Địa chỉ nhận hàng</h4>
+
+                        <a asp-controller="Checkout"
+                           asp-action="BillingAddress">
+                            Thay đổi
+                        </a>
+                    </div>
+
+                    <p><strong>@Model.CustomerName</strong></p>
+                    <p>Số điện thoại: @Model.PhoneNumber</p>
+                    <p>@Model.ShippingAddress</p>
+                </div>
+
+                <div class="checkout-confirm-box">
+                    <div class="confirm-title-row">
+                        <h4>Phương thức giao hàng</h4>
+
+                        <a asp-controller="Checkout"
+                           asp-action="ShippingMethod">
+                            Thay đổi
+                        </a>
+                    </div>
+
+                    <p>@Model.ShippingMethodName</p>
+                    <p>Phí giao hàng: @Model.ShippingFee.ToString("N0") đ</p>
+                </div>
+
+                <div class="checkout-confirm-box">
+                    <div class="confirm-title-row">
+                        <h4>Phương thức thanh toán</h4>
+
+                        <a asp-controller="Checkout"
+                           asp-action="PaymentMethod">
+                            Thay đổi
+                        </a>
+                    </div>
+
+                    <p>@PaymentText(Model.PaymentMethod)</p>
+                </div>
+            </div>
+
+            <div class="checkout-note-card">
+                <h4>Ghi chú đơn hàng</h4>
+
+                <textarea name="orderNote"
+                          form="placeOrderForm"
+                          class="form-control"
+                          rows="4"
+                          placeholder="Bạn có muốn ghi chú gì thêm cho đơn hàng không?"></textarea>
+            </div>
+
+            <div class="checkout-products-card">
+                <div class="checkout-products-title">
+                    <h4>Sản phẩm trong đơn hàng</h4>
+
+                    <a asp-controller="Cart"
+                       asp-action="Index"
+                       class="btn btn-light">
+                        ← Sửa giỏ hàng
+                    </a>
+                </div>
+
+                @foreach (var item in Model.CartItems)
+                {
+                    var product = item.Product;
+
+                    if (product == null)
+                    {
+                        continue;
+                    }
+
+                    <div class="checkout-confirm-product">
+                        <img src="@product.ImageUrl"
+                             alt="@product.Name"
+                             onerror="this.src='/images/products/no-image.jpg'" />
+
+                        <div>
+                            <h5>@product.Name</h5>
+
+                            @if (!string.IsNullOrWhiteSpace(product.Description))
+                            {
+                                <p>@product.Description</p>
+                            }
+
+                            <strong>@product.Price.ToString("N0") đ</strong>
+
+                            <span>Số lượng: @item.Quantity</span>
+
+                            <span>
+                                Thành tiền:
+                                <b>@((product.Price * item.Quantity).ToString("N0")) đ</b>
+                            </span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </main>
+
+        <aside>
+            <div class="checkout-summary-box">
+                <div class="checkout-summary-row">
+                    <span>Tạm tính:</span>
+                    <strong>@Model.ProductsTotal.ToString("N0") đ</strong>
+                </div>
+
+                <div class="checkout-summary-row">
+                    <span>Phí giao hàng:</span>
+                    <strong>@Model.ShippingFee.ToString("N0") đ</strong>
+                </div>
+
+                <div class="checkout-summary-row">
+                    <span>Thuế:</span>
+                    <strong>0 đ</strong>
+                </div>
+
+                <hr />
+
+                <div class="checkout-summary-total">
+                    <span>Tổng cộng:</span>
+                    <strong>@Model.Total.ToString("N0") đ</strong>
+                </div>
+
+                <p class="checkout-term-text">
+                    Bằng cách xác nhận, bạn đồng ý với điều khoản dịch vụ và chính sách bảo mật của cửa hàng.
+                </p>
+
+                <form id="placeOrderForm"
+                      asp-controller="Checkout"
+                      asp-action="PlaceOrder"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit" class="checkout-confirm-btn">
+                        Xác nhận đặt hàng <span>›</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+    </div>
+</div>
+
+@functions {
+    private string PaymentText(PaymentMethod method)
+    {
+        return method switch
+        {
+            PaymentMethod.CashOnDelivery => "Thanh toán khi nhận hàng",
+            PaymentMethod.BankTransfer => "Chuyển khoản ngân hàng",
+            PaymentMethod.OnlinePaymentComingSoon => "Thanh toán online",
+            _ => method.ToString()
+        };
+    }
+}

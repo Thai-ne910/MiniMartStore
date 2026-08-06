@@ -1,0 +1,210 @@
+﻿@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower() ?? "";
+    var bodyPageClass = $"{currentController}-{currentAction}";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>@ViewData["Title"] - MiniSmartstore</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/MiniSmartstoreMvc.styles.css" asp-append-version="true" />
+</head>
+
+<body class="@bodyPageClass">
+    <div class="shop-topbar">
+        <div class="container shop-topbar-inner">
+            <div class="topbar-left">
+                <div class="dropdown currency-dropdown">
+                    <button class="topbar-dropdown-btn dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                        <span id="currentCurrencyText">VND (₫)</span>
+                    </button>
+
+                    <ul class="dropdown-menu currency-menu">
+                        <li>
+                            <button class="dropdown-item currency-option" type="button" data-currency="VND">
+                                VND (₫)
+                            </button>
+                        </li>
+
+                        <li>
+                            <button class="dropdown-item currency-option" type="button" data-currency="USD">
+                                USD ($)
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <a asp-controller="Contact"
+                   asp-action="Index"
+                   class="top-link">
+                    LIÊN HỆ
+                </a>
+
+                <div class="dropdown shop-service-dropdown">
+                    <button class="shop-service-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            data-bs-display="static"
+                            aria-expanded="false">
+                        <span>DỊCH VỤ</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+
+                    <ul class="dropdown-menu dropdown-menu-end shop-service-menu">
+                        <li>
+                            <a asp-controller="Service"
+                               asp-action="WhatsNew"
+                               class="shop-service-item">
+                                <i class="bi bi-stars"></i>
+                                <span>
+                                    <strong>What’s new</strong>
+                                    <small>Sản phẩm mới, nổi bật và đang giảm giá</small>
+                                </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a asp-controller="Service"
+                               asp-action="RecentlyViewed"
+                               class="shop-service-item">
+                                <i class="bi bi-clock-history"></i>
+                                <span>
+                                    <strong>Recently viewed products</strong>
+                                    <small>Xem lại những sản phẩm bạn vừa truy cập</small>
+                                </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a asp-controller="Service"
+                               asp-action="AboutUs"
+                               class="shop-service-item">
+                                <i class="bi bi-info-circle"></i>
+                                <span>
+                                    <strong>About us</strong>
+                                    <small>Giới thiệu về MiniSmartstore</small>
+                                </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a asp-controller="Contact"
+                               asp-action="Index"
+                               class="shop-service-item">
+                                <i class="bi bi-headset"></i>
+                                <span>
+                                    <strong>Contact us</strong>
+                                    <small>Liên hệ và gửi yêu cầu hỗ trợ</small>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <partial name="_LoginPartial" />
+            </div>
+        </div>
+    </div>
+
+    <header class="shop-header">
+        <div class="container shop-header-inner">
+            <a asp-controller="Home" asp-action="Index" class="shop-brand">
+                <span class="shop-brand-icon">M</span>
+
+                <span class="shop-brand-text">
+                    <strong>MiniSmartstore</strong>
+                </span>
+            </a>
+
+            <form asp-controller="Product" asp-action="Index" method="get" class="smart-search">
+                <span class="search-icon">🔍</span>
+                <input type="text" name="search" placeholder="Bạn muốn tìm sản phẩm gì?" />
+            </form>
+
+            <div class="shop-actions">
+                <button type="button"
+                        class="header-action-link drawer-open-btn"
+                        data-drawer-tab="compare">
+                    <span class="action-icon">⇄</span>
+
+                    <span>
+                        <small>So sánh</small>
+                        <strong>Sản phẩm</strong>
+                    </span>
+                </button>
+
+                <button type="button"
+                        class="header-action-link drawer-open-btn"
+                        data-drawer-tab="wishlist">
+                    <span class="action-icon">♡</span>
+
+                    <span>
+                        <small>Yêu thích</small>
+                        <strong>Danh sách</strong>
+                    </span>
+                </button>
+
+                @await Component.InvokeAsync("CartCount")
+            </div>
+        </div>
+    </header>
+
+    @await Component.InvokeAsync("CategoryMenu")
+
+    <main>
+        @RenderBody()
+    </main>
+
+
+    <partial name="_ToastNotification" />
+
+    <footer class="shop-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>MiniSmartstore</h5>
+                    <p>Website thương mại điện tử mini xây dựng bằng ASP.NET Core MVC.</p>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <h5>Chức năng</h5>
+                    <p>Quản lý sản phẩm, giỏ hàng, đơn hàng và thanh toán cơ bản.</p>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <h5>Liên hệ</h5>
+                    <p>Email: admin@mini.com</p>
+                    <p>Hotline: 0900 000 000</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <div id="shopDrawerHost"></div>
+    <script src="~/js/shop-drawer.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+    <div id="shopDrawerContainer"></div>
+    <form id="ajaxAntiForgeryForm" style="display:none">
+        @Html.AntiForgeryToken()
+    </form>
+</body>
+</html>
