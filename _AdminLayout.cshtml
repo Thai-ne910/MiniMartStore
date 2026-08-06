@@ -1,0 +1,400 @@
+﻿@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower() ?? "";
+
+    bool IsController(params string[] names)
+    {
+        return names.Any(x => x.ToLower() == currentController);
+    }
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>@ViewData["Title"] - Admin MiniSmartstore</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin-customer.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin/admin-report.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin/admin-product-form.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+
+<body class="msa-body">
+    <header class="msa-header">
+        <div class="msa-brand">
+            <a asp-area="Admin"
+               asp-controller="Dashboard"
+               asp-action="Index"
+               class="msa-brand-link">
+                <span class="msa-logo">M</span>
+                <span class="msa-brand-text">MiniSmartstore</span>
+            </a>
+        </div>
+
+        <nav class="msa-nav">
+            <a asp-area="Admin"
+               asp-controller="Dashboard"
+               asp-action="Index"
+               class="msa-nav-link @(currentController == "dashboard" ? "active" : "")">
+                <i class="bi bi-house-door"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <div class="dropdown msa-nav-dropdown">
+                <button class="msa-nav-link msa-nav-button @(currentController == "category" || currentController == "product" || currentController == "productrule" || currentController == "productreview" ? "active" : "")"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        data-bs-display="static"
+                        aria-expanded="false">
+                    <i class="bi bi-box-seam"></i>
+                    <span>Sản phẩm</span>
+                </button>
+
+                <ul class="dropdown-menu msa-menu">
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Category"
+                           asp-action="List">
+                            <span class="msa-menu-icon"><i class="bi bi-folder2-open"></i></span>
+                            <span>
+                                <strong>Danh mục sản phẩm</strong>
+                                <small>Quản lý danh mục hiển thị ngoài shop</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Product"
+                           asp-action="Index">
+                            <span class="msa-menu-icon"><i class="bi bi-grid"></i></span>
+                            <span>
+                                <strong>Quản lý sản phẩm</strong>
+                                <small>Thêm, sửa, ẩn hiện sản phẩm</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="ProductRule"
+                           asp-action="Index">
+                            <span class="msa-menu-icon"><i class="bi bi-tags"></i></span>
+                            <span>
+                                <strong>Quy tắc sản phẩm</strong>
+                                <small>Giảm giá, nổi bật, ẩn hiện tự động</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="ProductReview"
+                           asp-action="Index">
+                            <span class="msa-menu-icon"><i class="bi bi-star-half"></i></span>
+                            <span>
+                                <strong>Đánh giá sản phẩm</strong>
+                                <small>Duyệt, ẩn hoặc xóa đánh giá của khách hàng</small>
+                            </span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="dropdown msa-nav-dropdown">
+                <button class="msa-nav-link msa-nav-button @(currentController == "order" || currentController == "shoppingcart" || currentController == "returncase" ? "active" : "")"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        data-bs-display="static"
+                        aria-expanded="false">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>Bán hàng</span>
+                </button>
+
+                <ul class="dropdown-menu msa-menu">
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Order"
+                           asp-action="List">
+                            <span class="msa-menu-icon"><i class="bi bi-receipt"></i></span>
+                            <span>
+                                <strong>Quản lý đơn hàng</strong>
+                                <small>Theo dõi và cập nhật trạng thái đơn</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="ShoppingCart"
+                           asp-action="CurrentCarts">
+                            <span class="msa-menu-icon"><i class="bi bi-cart3"></i></span>
+                            <span>
+                                <strong>Giỏ hàng hiện tại</strong>
+                                <small>Xem giỏ hàng đang lưu trong hệ thống</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="ReturnCase"
+                           asp-action="List">
+                            <span class="msa-menu-icon"><i class="bi bi-arrow-counterclockwise"></i></span>
+                            <span>
+                                <strong>Hoàn trả / đổi trả</strong>
+                                <small>Quản lý yêu cầu đổi trả hàng</small>
+                            </span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="dropdown msa-nav-dropdown">
+                <button class="msa-nav-link msa-nav-button @(currentController == "customer" ? "active" : "")"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        data-bs-display="static"
+                        aria-expanded="false">
+                    <i class="bi bi-people"></i>
+                    <span>Khách hàng</span>
+                </button>
+
+                <ul class="dropdown-menu msa-menu">
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Customer"
+                           asp-action="List">
+                            <span class="msa-menu-icon"><i class="bi bi-people"></i></span>
+                            <span>
+                                <strong>Quản lý khách hàng</strong>
+                                <small>Xem, tìm kiếm và chỉnh sửa tài khoản khách hàng</small>
+                            </span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="dropdown msa-nav-dropdown">
+                <button class="msa-nav-link msa-nav-button @(currentController == "report" ? "active" : "")"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        data-bs-display="static"
+                        aria-expanded="false">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span>Báo cáo</span>
+                </button>
+
+                <ul class="dropdown-menu msa-menu msa-report-menu">
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Report"
+                           asp-action="Index">
+                            <span class="msa-menu-icon">
+                                <i class="bi bi-speedometer2"></i>
+                            </span>
+                            <span>
+                                <strong>Báo cáo tổng quan</strong>
+                                <small>Xem nhanh doanh thu, đơn hàng và hiệu quả shop</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Report"
+                           asp-action="Sales">
+                            <span class="msa-menu-icon">
+                                <i class="bi bi-graph-up"></i>
+                            </span>
+                            <span>
+                                <strong>Báo cáo doanh thu</strong>
+                                <small>Thống kê doanh thu theo ngày và trạng thái đơn</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Report"
+                           asp-action="Products">
+                            <span class="msa-menu-icon">
+                                <i class="bi bi-box-seam"></i>
+                            </span>
+                            <span>
+                                <strong>Báo cáo sản phẩm</strong>
+                                <small>Sản phẩm bán chạy theo số lượng hoặc doanh thu</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Report"
+                           asp-action="Customers">
+                            <span class="msa-menu-icon">
+                                <i class="bi bi-people"></i>
+                            </span>
+                            <span>
+                                <strong>Báo cáo khách hàng</strong>
+                                <small>Khách hàng mua nhiều và tổng tiền mua</small>
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-menu-item"
+                           asp-area="Admin"
+                           asp-controller="Report"
+                           asp-action="Inventory">
+                            <span class="msa-menu-icon">
+                                <i class="bi bi-boxes"></i>
+                            </span>
+                            <span>
+                                <strong>Báo cáo tồn kho</strong>
+                                <small>Cảnh báo hết hàng, sắp hết hàng và tồn kho nhiều</small>
+                            </span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="msa-actions">
+            <a asp-area=""
+               asp-controller="Home"
+               asp-action="Index"
+               class="msa-action-btn"
+               title="Xem cửa hàng">
+                <i class="bi bi-shop"></i>
+            </a>
+
+            <button class="msa-action-btn"
+                    type="button"
+                    title="Trợ giúp">
+                <i class="bi bi-question-circle"></i>
+            </button>
+
+            <div class="dropdown">
+                <button class="msa-account-btn"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                    <span class="msa-account-icon">
+                        <i class="bi bi-person-fill"></i>
+                    </span>
+
+                    <span class="msa-account-name">
+                        @User.Identity?.Name
+                    </span>
+
+                    <i class="bi bi-chevron-down msa-account-caret"></i>
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end msa-account-menu">
+                    <li class="msa-account-head">
+                        <span class="msa-account-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </span>
+
+                        <div>
+                            <strong>Tài khoản quản trị</strong>
+                            <small>@User.Identity?.Name</small>
+                        </div>
+                    </li>
+
+                    <li>
+                        <a class="msa-small-item"
+                           asp-area="Identity"
+                           asp-page="/Account/Manage/Index">
+                            <i class="bi bi-person"></i>
+                            <span>Tài khoản của tôi</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="msa-small-item"
+                           asp-area=""
+                           asp-controller="Home"
+                           asp-action="Index">
+                            <i class="bi bi-shop"></i>
+                            <span>Về trang Shop</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <hr class="dropdown-divider" />
+                    </li>
+
+                    <li>
+                        <form asp-area="Identity"
+                              asp-page="/Account/Logout"
+                              asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"
+                              method="post">
+                            <button type="submit" class="msa-small-item danger">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Đăng xuất</span>
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="msa-main">
+        @RenderBody()
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const adminHeader = document.querySelector(".msa-header");
+                const dropdownButtons = document.querySelectorAll(".msa-nav-button[data-bs-toggle='dropdown']");
+
+                dropdownButtons.forEach(function (button) {
+                    button.addEventListener("show.bs.dropdown", function () {
+                        if (adminHeader) {
+                            adminHeader.classList.add("dropdown-open");
+                        }
+                    });
+
+                    button.addEventListener("hidden.bs.dropdown", function () {
+                        setTimeout(function () {
+                            const openedDropdown = document.querySelector(".msa-nav-button.show");
+
+                            if (!openedDropdown && adminHeader) {
+                                adminHeader.classList.remove("dropdown-open");
+                            }
+                        }, 50);
+                    });
+                });
+            });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
